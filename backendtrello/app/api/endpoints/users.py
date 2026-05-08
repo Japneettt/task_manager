@@ -1,0 +1,115 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+from uuid import UUID
+
+from app.core.database import get_db
+from app.models.user import User
+from app.schemas.user import UserRead, UserUpdate, ChangePassword
+from app.core.security import verify_password, hash_password, get_current_token
+
+router = APIRouter()
+
+
+def get_initials(first_name: str, last_name: str) -> str:
+    return f"{first_name[0]}{last_name[0]}".upper()
+
+
+# ✅ FIXED: SYNC DB, NO await
+def get_current_user(
+    token_payload: dict = Depends(get_current_token),
+    db: Session = Depends(get_db),
+):
+    user_id = token_payload.get("sub")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    try:
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token subject")
+
+    user = db.execute(
+        select(User).where(User.id == user_uuid)
+    ).scalars().first()
+
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+
+    return user
+
+
+@router.get("/me", response_model=UserRead)
+def get_me(
+    current_user: User = Depends(get_current_user)
+):
+    return UserRead(
+        id=current_user.id,
+        email=current_user.email,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
+        role=current_user.role,
+        is_active=current_user.is_active,
+        created_at=current_user.created_at,
+        initials=get_initials(
+            current_user.first_name,
+            current_user.last_name
+        ),
+    )
+
+
+@router.put("/me", response_model=UserRead)
+def update_me(
+    data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if data.first_name:
+        current_user.first_name = data.first_name
+    if data.last_name:
+        current_user.last_name = data.last_name
+
+    db.commit()
+    db.refresh(current_user)
+
+    return UserRead(
+        id=current_user.id,
+        email=current_user.email,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
+        role=current_user.role,
+        is_active=current_user.is_active,
+        created_at=current_user.created_at,
+        initials=get_initials(
+            current_user.first_name,
+            current_user.last_name
+        ),
+    )
+
+
+@router.put("/me/password")
+def change_password(
+    data: ChangePassword,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(data.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect old password")
+
+    current_user.hashed_password = hash_password(data.new_password)
+    db.commit()
+
+    return {"message": "Password updated successfully"}
+
+
+@router.delete("/me")
+def deactivate_account(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.is_active = False
+    db.commit()
+
+    return {"message": "Account deactivated"}
+

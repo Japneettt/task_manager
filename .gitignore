@@ -1,0 +1,61 @@
+# =========================
+# 🔒 ENV FILES (IMPORTANT)
+# =========================
+.env
+.env.*
+*.env
+
+# =========================
+# 🐍 PYTHON BACKEND
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# FastAPI / logs
+*.log
+
+# =========================
+# 📦 NODE / FRONTEND
+# =========================
+node_modules/
+dist/
+build/
+.next/
+
+# npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# 🖥️ OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# ⚙️ IDE / EDITOR
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# 🔐 SECRET & KEYS
+# =========================
+*.pem
+*.key
+*.crt
+
+# =========================
+# 🧪 TEST / COVERAGE
+# =========================
+coverage/
+*.cover
