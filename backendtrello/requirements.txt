@@ -1,0 +1,38 @@
+# Core
+fastapi
+uvicorn
+ 
+# Config
+python-dotenv
+pydantic
+pydantic-settings
+ 
+# Database
+sqlalchemy
+psycopg2-binary
+alembic
+ 
+# Authentication & Security (ARGON2)
+argon2-cffi
+python-jose
+ 
+# Forms
+python-multipart
+ 
+# OTP & Email
+fastapi-mail
+email-validator
+ 
+# External services
+stripe
+firebase-admin
+httpx
+ 
+# Utilities
+slowapi
+ 
+# Testing
+pytest
+pytest-asyncio
+ 
+ 
