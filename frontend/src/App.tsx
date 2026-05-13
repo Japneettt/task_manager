@@ -4,9 +4,15 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AuthPage from "./features/auth/AuthPage";
 import Dashboard from "./features/dashboard/Dashboard";
 
+// ✅ FIXED IMPORTS
+import BoardsDashboard from "./features/board/BoardDashboard";
+import BoardPage from "./features/board/BoardPage";
+
+import InboxPage from "./features/inbox/InboxPage";
+import TaskPage from "./features/tasks/TaskPage";
+
 /**
  * ✅ TEMP AUTH CHECK
- * Replace later with JWT validation from backend
  */
 const isAuthenticated = (): boolean => {
   return localStorage.getItem("isLoggedIn") === "true";
@@ -14,7 +20,6 @@ const isAuthenticated = (): boolean => {
 
 /**
  * ✅ PROTECTED ROUTE
- * Only allow access if user is logged in
  */
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   if (!isAuthenticated()) {
@@ -25,7 +30,6 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
 /**
  * ✅ PUBLIC ROUTE
- * Prevent logged-in users from going back to login page
  */
 const PublicRoute = ({ children }: { children: JSX.Element }) => {
   if (isAuthenticated()) {
@@ -39,7 +43,7 @@ function App() {
     <BrowserRouter>
       <Routes>
 
-        {/* ✅ AUTH PAGE */}
+        {/* ✅ AUTH */}
         <Route
           path="/"
           element={
@@ -55,6 +59,46 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ BOARDS DASHBOARD (ALL BOARDS) */}
+        <Route
+          path="/boards"
+          element={
+            <ProtectedRoute>
+              <BoardsDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ SINGLE BOARD PAGE */}
+        <Route
+          path="/boards/:id"
+          element={
+            <ProtectedRoute>
+              <BoardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ INBOX */}
+        <Route
+          path="/inbox"
+          element={
+            <ProtectedRoute>
+              <InboxPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ TASKS */}
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute>
+              <TaskPage />
             </ProtectedRoute>
           }
         />
