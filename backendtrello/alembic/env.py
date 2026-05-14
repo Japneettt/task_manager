@@ -2,8 +2,9 @@ from logging.config import fileConfig
 from app.models.user import User
 from app.models.notification import Notification 
 from app.models.task import Task
-from app.models.boards import Board 
+from app.models.boards import Board
 from app.models.lists import List
+from app.models.card import Card
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from app.core.database import Base

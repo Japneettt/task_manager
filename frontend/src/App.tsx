@@ -9,7 +9,8 @@ import BoardsDashboard from "./features/board/BoardDashboard";
 import BoardPage from "./features/board/BoardPage";
 
 import InboxPage from "./features/inbox/InboxPage";
-import TaskPage from "./features/tasks/TaskPage";
+import TaskPage from "./features/tasks/CardPage";
+import RegisterPage from "./features/auth/RegisterPage";
 
 /**
  * ✅ TEMP AUTH CHECK
@@ -105,6 +106,7 @@ function App() {
 
         {/* ✅ FALLBACK */}
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/register" element={<RegisterPage />} />
 
       </Routes>
     </BrowserRouter>

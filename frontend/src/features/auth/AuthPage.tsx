@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../services/api"; // ✅ important
+import { api } from "../../services/api";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
@@ -12,7 +12,7 @@ const AuthPage = () => {
 
   const navigate = useNavigate();
 
-  // ✅ LOGIN HANDLER (REAL API)
+  // ✅ LOGIN FUNCTION
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -25,13 +25,12 @@ const AuthPage = () => {
         password,
       });
 
-      // ✅ store JWT token
+      // ✅ store token
       localStorage.setItem("token", res.data.access_token);
       localStorage.setItem("isLoggedIn", "true");
 
-      // ✅ redirect
+      // ✅ redirect to dashboard
       navigate("/dashboard");
-
     } catch (err: any) {
       setError(
         err?.response?.data?.detail || "Invalid email or password"
@@ -70,7 +69,7 @@ const AuthPage = () => {
                 Log in to continue to your workspace
               </p>
 
-              {/* ✅ ERROR MESSAGE */}
+              {/* ✅ ERROR */}
               {error && <Alert variant="danger">{error}</Alert>}
 
               {/* ✅ FORM */}
@@ -116,8 +115,7 @@ const AuthPage = () => {
                   className="w-100"
                   disabled={loading}
                   style={{
-                    background:
-                      "linear-gradient(to right, #4f46e5, #2563eb)",
+                    background: "linear-gradient(to right, #4f46e5, #2563eb)",
                     border: "none",
                     padding: "10px",
                     fontWeight: 500,
@@ -127,12 +125,13 @@ const AuthPage = () => {
                 </Button>
               </Form>
 
-              {/* ✅ FOOTER */}
+              {/* ✅ SIGN UP LINK (FIXED 🔥) */}
               <div className="text-center mt-4">
                 <span style={{ fontSize: "14px", color: "#6b7280" }}>
                   Don’t have an account?
                 </span>
                 <span
+                  onClick={() => navigate("/register")}
                   style={{
                     marginLeft: "5px",
                     color: "#2563eb",
@@ -147,7 +146,7 @@ const AuthPage = () => {
             </div>
           </Col>
 
-          {/* ✅ RIGHT SIDE IMAGE */}
+          {/* ✅ RIGHT IMAGE */}
           <Col md={7} className="d-none d-md-block">
             <div
               style={{

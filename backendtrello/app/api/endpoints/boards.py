@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from uuid import UUID
 
-# ✅ DB + dependencies
 from app.core.database import get_db
 from app.api.endpoints.users import get_current_user
 
-# ✅ Models
 from app.models.boards import Board
 from app.models.lists import List
-from app.models.task import Task
+from app.models.card import Card
 from app.models.user import User
 
+from app.utils.helper_function import create_notification
+
 router = APIRouter(prefix="", tags=["Boards"])
+
 
 @router.post("/")
 def create_board(
@@ -20,62 +22,97 @@ def create_board(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # ✅ create board
-    board = Board(
-        title=title,
-        owner_id=current_user.id
-    )
-
+    board = Board(title=title, owner_id=current_user.id)
     db.add(board)
-    db.commit()
-    db.refresh(board)
+    db.flush()  # ✅ important (get id before commit)
 
-    # ✅ AUTO CREATE LISTS
+    # ✅ create lists
     default_lists = ["Pending", "In Progress", "Completed"]
 
     for index, name in enumerate(default_lists):
-        new_list = List(
-            title=name,
-            position=index,
-            board_id=board.id
-        )
-        db.add(new_list)
+        db.add(List(title=name, position=index, board_id=board.id))
 
-    db.commit()
+    # ✅ notification BEFORE commit
+    create_notification(
+    db,
+    message=f"You created board '{title}'",
+    user_id=current_user.id,
+    board_id=board.id
+)
 
-    return board
 
+    db.commit() 
+    db.refresh(board)
 
+    return {
+        "id": str(board.id),
+        "title": board.title,
+    }
+
+from sqlalchemy import or_
+from app.models.card import Card
+
+# ✅ GET ALL BOARDS (FIXED 🔥)
 @router.get("/")
 def get_boards(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     boards = db.query(Board).filter(
-        Board.owner_id == current_user.id
+        or_(
+            # ✅ boards created by user
+            Board.owner_id == current_user.id,
+
+            # ✅ boards where user is assigned tasks
+            Board.id.in_(
+                db.query(Card.board_id).filter(
+                    Card.assigned_to == current_user.id
+                )
+            )
+        )
     ).all()
 
-    return {"boards": boards}
+    return {
+        "boards": [
+            {"id": str(b.id), "title": b.title}
+            for b in boards
+        ]
+    }
 
+
+from sqlalchemy import or_
+from app.models.card import Card
+
+# ✅ GET BOARD (FIXED 🔥)
 @router.get("/{board_id}")
 def get_board(
     board_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # ✅ get board
     board = db.query(Board).filter(
         Board.id == board_id,
-        Board.owner_id == current_user.id
+        or_(
+            # ✅ owner
+            Board.owner_id == current_user.id,
+
+            # ✅ assigned user access
+            Board.id.in_(
+                db.query(Card.board_id).filter(
+                    Card.assigned_to == current_user.id
+                )
+            )
+        )
     ).first()
 
     if not board:
         raise HTTPException(status_code=404, detail="Board not found")
 
-    # ✅ get lists
-    lists = db.query(List).filter(
-        List.board_id == board.id
-    ).order_by(List.position).all()
+    # ✅ FETCH LISTS
+    lists = db.query(List)\
+        .filter(List.board_id == board_id)\
+        .order_by(List.position)\
+        .all()
 
     result = {
         "id": str(board.id),
@@ -83,11 +120,12 @@ def get_board(
         "lists": []
     }
 
-    # ✅ attach tasks inside lists
+    # ✅ FETCH CARDS
     for l in lists:
-        tasks = db.query(Task).filter(
-            Task.list_id == l.id
-        ).all()
+        cards = db.query(Card)\
+            .filter(Card.list_id == l.id)\
+            .order_by(Card.position)\
+            .all()
 
         result["lists"].append({
             "id": str(l.id),
@@ -95,16 +133,18 @@ def get_board(
             "position": l.position,
             "cards": [
                 {
-                    "id": str(t.id),
-                    "title": t.title,
-                    "assigned_to": str(t.assigned_to) if t.assigned_to else None
+                    "id": str(c.id),
+                    "title": c.title,
+                    "description": c.description,   # ✅ added
+                    "priority": c.priority,         # ✅ added
                 }
-                for t in tasks
+                for c in cards
             ]
         })
 
     return result
 
+# ✅ DELETE BOARD
 @router.delete("/{board_id}")
 def delete_board(
     board_id: UUID,
@@ -123,8 +163,3 @@ def delete_board(
     db.commit()
 
     return {"message": "Board deleted"}
-
-
-
-
-

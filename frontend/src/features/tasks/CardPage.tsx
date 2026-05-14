@@ -9,11 +9,11 @@ type Task = {
 };
 
 type User = {
-  id: string;
+  id: string
   email: string;
 };
 
-const TaskPage = () => {
+const CardPage = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [title, setTitle] = useState("");
@@ -124,4 +124,4 @@ const TaskPage = () => {
   );
 };
 
-export default TaskPage;
+export default CardPage;
