@@ -15,14 +15,14 @@ type Notification = {
 
 const Navbar = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0); // ✅ NEW
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const navigate = useNavigate();
   const location = useLocation();
 
   // ✅ INITIALS
-  const getInitials = (first: string, last: string) => {
-    return `${first[0]}${last[0]}`.toUpperCase();
-  };
+  const getInitials = (first: string, last: string) =>
+    `${first[0]}${last[0]}`.toUpperCase();
 
   // ✅ FETCH USER
   useEffect(() => {
@@ -39,10 +39,10 @@ const Navbar = () => {
     fetchUser();
   }, []);
 
-  // ✅ FETCH NOTIFICATION COUNT
+  // ✅ FETCH NOTIFICATIONS
   const fetchNotifications = async () => {
     try {
-      const res = await api.get("/notifications"); // ✅ use correct endpoint
+      const res = await api.get("/notifications");
       const unread = res.data.filter(
         (n: Notification) => !n.is_read
       );
@@ -84,11 +84,14 @@ const Navbar = () => {
       }}
     >
       {/* ✅ LOGO */}
-      <h5 style={{ cursor: "pointer" }} onClick={() => navigate("/dashboard")}>
+      <h5
+        style={{ cursor: "pointer" }}
+        onClick={() => navigate("/dashboard")}
+      >
         TaskFlow
       </h5>
 
-      {/* ✅ NAV */}
+      {/* ✅ NAV LINKS */}
       <div style={{ display: "flex", gap: "30px" }}>
         {/* Dashboard */}
         <span
@@ -106,7 +109,7 @@ const Navbar = () => {
           Boards
         </span>
 
-        {/* ✅ Inbox with Badge */}
+        {/* ✅ Inbox with badge */}
         <span
           style={activeStyle("/inbox")}
           onClick={() => navigate("/inbox")}
@@ -130,13 +133,25 @@ const Navbar = () => {
           )}
         </span>
 
-        <span style={{ cursor: "pointer" }}>Planner</span>
-        <span style={{ cursor: "pointer" }}>Activity</span>
+        {/* ✅ FIXED Planner */}
+        <span
+          style={activeStyle("/planner")}
+          onClick={() => navigate("/planner")}
+        >
+          Planner
+        </span>
+
+        {/* ✅ FIXED Activity */}
+        <span
+          style={activeStyle("/activity")}
+          onClick={() => navigate("/activity")}
+        >
+          Activity
+        </span>
       </div>
 
-      {/* ✅ PROFILE */}
+      {/* ✅ PROFILE SECTION */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        
         {/* Avatar */}
         <div
           style={{

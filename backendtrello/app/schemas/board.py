@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
@@ -5,6 +7,7 @@ from datetime import datetime
 class BoardCreate(BaseModel):
     title: str
     description: str | None = None
+    team_id: Optional[UUID] = None   
  
 class BoardRead(BaseModel):
     id: UUID

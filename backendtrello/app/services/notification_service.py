@@ -7,8 +7,9 @@ def create_notification(
     user_id: UUID,
     title: str,
     message: str,
-    type: str,
+    type: str | None = None,
     entity_id: UUID | None = None,
+    category: str = "personal",
 ):
     notification = Notification(
         user_id=user_id,
@@ -16,6 +17,7 @@ def create_notification(
         message=message,
         type=type,
         entity_id=entity_id,
+        category=category,
         is_read=False,
     )
 

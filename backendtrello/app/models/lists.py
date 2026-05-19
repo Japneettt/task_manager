@@ -17,10 +17,7 @@ class List(Base):
    
     board_id = Column(
     UUID(as_uuid=True),
-    ForeignKey("boards.id", ondelete="CASCADE"),
+    ForeignKey("boards.id", ondelete="CASCADE"),  
 )
-   
- 
-    # ✅ relationship to tasks
-    # tasks = relationship("Task", backref="list", cascade="all, delete")
     cards = relationship("Card", back_populates="list", cascade="all, delete")
+   

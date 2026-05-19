@@ -9,6 +9,9 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from app.core.database import Base
 from alembic import context
+from app.models.team import Team
+from app.models.team_member import TeamMember
+from app.models.team_invite import TeamInvite
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -5,9 +5,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import DateTime
 from app.core.database import Base
 from sqlalchemy.sql import func
-
-
-
 class Board(Base):
     __tablename__ = "boards"
  
@@ -36,6 +33,10 @@ class Board(Base):
    
     description = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id"), nullable=True)
+    
+ 
+ 
  
  
  

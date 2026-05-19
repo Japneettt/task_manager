@@ -17,7 +17,7 @@ const BoardsDashboard = () => {
   const fetchBoards = async () => {
     try {
       const res = await api.get("/boards");
-      setBoards(res.data.boards);
+      setBoards(res.data.boards || res.data); // ✅ support both formats
     } catch (err) {
       console.error("Error fetching boards", err);
     }
@@ -27,16 +27,22 @@ const BoardsDashboard = () => {
     fetchBoards();
   }, []);
 
-  // ✅ CREATE BOARD
+  // ✅ CREATE BOARD (FIXED 🔥)
   const createBoard = async () => {
-    if (!title) return;
+    if (!title.trim()) return;
 
-    await api.post("/boards", null, {
-      params: { title },
-    });
+    try {
+      await api.post("/boards", {
+        title: title,  // ✅ CORRECT
+        description: "",  // ✅ matches schema
+      });
 
-    setTitle("");
-    fetchBoards();
+      setTitle("");
+      fetchBoards(); // ✅ refresh list
+    } catch (err: any) {
+      console.error("Create board error:", err);
+      alert(err.response?.data?.detail || "Failed to create board");
+    }
   };
 
   return (
@@ -57,34 +63,52 @@ const BoardsDashboard = () => {
               borderRadius: "8px",
               border: "1px solid #ccc",
               marginRight: "10px",
+              width: "250px",
             }}
           />
-          <button onClick={createBoard}>Create</button>
+
+          <button
+            onClick={createBoard}
+            style={{
+              padding: "8px 14px",
+              background: "#4f46e5",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            Create
+          </button>
         </div>
 
         {/* ✅ BOARDS GRID */}
         <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-          {boards.map((board) => (
-            <div
-              key={board.id}
-              onClick={() => navigate(`/boards/${board.id}`)}
-              style={{
-                width: "220px",
-                height: "120px",
-                background: "linear-gradient(135deg, #4f46e5, #6366f1)",
-                color: "#fff",
-                borderRadius: "12px",
-                padding: "15px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "flex-end",
-                fontWeight: 600,
-                boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-              }}
-            >
-              {board.title}
-            </div>
-          ))}
+          {boards.length === 0 ? (
+            <p>No boards yet</p>
+          ) : (
+            boards.map((board) => (
+              <div
+                key={board.id}
+                onClick={() => navigate(`/boards/${board.id}`)}
+                style={{
+                  width: "220px",
+                  height: "120px",
+                  background: "linear-gradient(135deg, #4f46e5, #6366f1)",
+                  color: "#fff",
+                  borderRadius: "12px",
+                  padding: "15px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  fontWeight: 600,
+                  boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+                }}
+              >
+                {board.title}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

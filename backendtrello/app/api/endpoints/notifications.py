@@ -1,33 +1,41 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from uuid import UUID
-
+from typing import Optional
+ 
 from app.core.database import get_db
 from app.models.notification import Notification
 from app.schemas.notification import NotificationRead
 from app.api.endpoints.users import get_current_user
 from app.models.user import User
-
+ 
+# ✅ Router
 router = APIRouter(prefix="", tags=["Notifications"])
-
-
-# ✅ GET ALL NOTIFICATIONS (FIXED ✅)
+ 
 @router.get("/", response_model=list[NotificationRead])
 def get_notifications(
+    category: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    notifications = (
-        db.query(Notification)
-        .filter(Notification.user_id == current_user.id)   # ✅ per user
-        .order_by(Notification.id.desc())                  # ✅ FIXED (no created_at)
-        .all()
-    )
+    query = db.query(Notification).filter(Notification.user_id == current_user.id)
+
+    if category:
+        # treat missing category as 'personal' for backwards compatibility
+        if category == "personal":
+            from sqlalchemy import or_
+
+            query = query.filter(
+                or_(Notification.category == "personal", Notification.category == None)
+            )
+        else:
+            query = query.filter(Notification.category == category)
+
+    notifications = query.order_by(Notification.created_at.desc()).all()
 
     return notifications
-
-
-# ✅ GET SINGLE
+ 
+ 
 @router.get("/{notification_id}", response_model=NotificationRead)
 def get_notification(
     notification_id: UUID,
@@ -42,20 +50,21 @@ def get_notification(
         )
         .first()
     )
-
+ 
     if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-
+        raise HTTPException(
+            status_code=404, detail="Notification not found"
+        )
+ 
     return notification
-
-
-# ✅ MARK ONE AS READ
+ 
 @router.patch("/{notification_id}/read")
 def mark_notification_as_read(
     notification_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # ✅ Correct query
     notification = (
         db.query(Notification)
         .filter(
@@ -64,18 +73,26 @@ def mark_notification_as_read(
         )
         .first()
     )
-
+ 
+    # ✅ Not found check
     if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-
+        raise HTTPException(
+            status_code=404,
+            detail="Notification not found"
+        )
+ 
+    # ✅ Update
     notification.is_read = True
+ 
+    # ✅ Save changes
     db.commit()
     db.refresh(notification)
-
-    return {"message": "Notification marked as read"}
-
-
-# ✅ MARK ALL AS READ
+ 
+    return {
+        "message": "Notification marked as read",
+        "id": str(notification.id)
+    }
+ 
 @router.patch("/read-all")
 def mark_all_notifications_as_read(
     db: Session = Depends(get_db),
@@ -85,13 +102,11 @@ def mark_all_notifications_as_read(
         Notification.user_id == current_user.id,
         Notification.is_read == False,
     ).update({"is_read": True})
-
+ 
     db.commit()
-
+ 
     return {"message": "All notifications marked as read"}
-
-
-# ✅ DELETE
+ 
 @router.delete("/{notification_id}", status_code=status.HTTP_200_OK)
 def delete_notification(
     notification_id: UUID,
@@ -106,13 +121,15 @@ def delete_notification(
         )
         .first()
     )
-
+ 
     if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-
+        raise HTTPException(
+            status_code=404, detail="Notification not found"
+        )
+ 
     db.delete(notification)
     db.commit()
-
+ 
     return {"message": "Notification deleted"}
 
 

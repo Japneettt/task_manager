@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from uuid import UUID
- 
+from fastapi import Query
 # ✅ DB
 from app.core.database import get_db
  
@@ -13,25 +13,37 @@ from app.models.boards import Board
 # ✅ Schemas
 from app.schemas.list import ListCreate, ListRead
  
-router = APIRouter()
+router = APIRouter(prefix="/boards")
  
  
 # ✅ CREATE LIST
-@router.post("/boards/{board_id}/lists", response_model=ListRead)
+@router.post("/{board_id}/lists", response_model=ListRead)
 def create_list(
     board_id: UUID,
-    data: ListCreate,
     db: Session = Depends(get_db),
+    data: ListCreate = None,   # ✅ optional body
+    title: str = Query(None),  # ✅ optional query
 ):
-    # ✅ check board exists
     board = db.query(Board).filter(Board.id == board_id).first()
     if not board:
         raise HTTPException(status_code=404, detail="Board not found")
  
+    # ✅ handle both cases
+    list_title = None
+    position = 0
+ 
+    if data:
+        list_title = data.title
+        position = data.position
+    elif title:
+        list_title = title
+    else:
+        raise HTTPException(status_code=400, detail="Title is required")
+ 
     lst = List(
         board_id=board_id,
-        title=data.title,
-        position=data.position,
+        title=list_title,
+        position=position,
     )
  
     db.add(lst)
@@ -39,6 +51,30 @@ def create_list(
     db.refresh(lst)
  
     return lst
+# @router.post("/boards/{board_id}/lists", response_model=ListRead)
+# @router.post("/{board_id}/lists", response_model=ListRead)
+# def create_list(
+#     board_id: UUID,
+#     data: ListCreate=None,
+#     title:str=Query(None),
+#     db: Session = Depends(get_db),
+# ):
+#     # ✅ check board exists
+#     board = db.query(Board).filter(Board.id == board_id).first()
+#     if not board:
+#         raise HTTPException(status_code=404, detail="Board not found")
+ 
+#     lst = List(
+#         board_id=board_id,
+#         title=data.title,
+#         position=data.position,
+#     )
+ 
+#     db.add(lst)
+#     db.commit()
+#     db.refresh(lst)
+ 
+#     return lst
  
  
 # ✅ GET ALL LISTS OF A BOARD

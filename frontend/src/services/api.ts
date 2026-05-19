@@ -58,8 +58,18 @@ export const moveCard = (cardId: string, listId: string, position: number) =>
   });
 
 // ✅ ✅ ✅ NOTIFICATIONS (NEW 🔥)
-export const getNotifications = () => api.get("/notifications");
+export const getNotifications = (params?: any) => api.get("/notifications", { params });
+export const getTeamInvites = () => api.get("/teams/invites");
+export const acceptTeamInvite = (id: string) =>
+  api.patch(`/teams/invites/${id}/accept`);
+export const rejectTeamInvite = (id: string) =>
+  api.patch(`/teams/invites/${id}/reject`);
 
 // (optional future)
 export const markNotificationRead = (id: string) =>
   api.patch(`/notifications/${id}/read`);
+
+export const getActivity = () => api.get("/activity");
+export const getWorkload = () => api.get("/activity/workload");
+export const getProductivity = () => api.get("/activity/productivity");
+export const getTimeline = () => api.get("/activity/timeline");
