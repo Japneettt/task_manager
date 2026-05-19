@@ -2,17 +2,48 @@ import { useState } from "react";
 import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
+import axios from "axios";
 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
-  // ✅ LOGIN FUNCTION
+  // ✅ ✅ UPDATED LOGIN AS ADMIN (IMPROVED)
+  const loginAsAdmin = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      // ✅ optional autofill (UX improvement)
+      setEmail("admin@gmail.com");
+      setPassword("1234");
+
+      const res = await api.post("/auth/login", {
+        email: "admin@gmail.com",
+        password: "1234",
+      });
+
+      // ✅ store token + user
+      localStorage.setItem("token", res.data.access_token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("isLoggedIn", "true");
+
+      // ✅ redirect to admin dashboard
+      navigate("/admin");
+
+    } catch (err: any) {
+      setError("Admin login failed");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ EXISTING LOGIN (UNCHANGED ✅)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -25,12 +56,18 @@ const AuthPage = () => {
         password,
       });
 
-      // ✅ store token
+      // ✅ store token and user
+      const user = res.data.user;
       localStorage.setItem("token", res.data.access_token);
+      localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("isLoggedIn", "true");
 
-      // ✅ redirect to dashboard
-      navigate("/dashboard");
+      if (user?.is_admin) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+
     } catch (err: any) {
       setError(
         err?.response?.data?.detail || "Invalid email or password"
@@ -109,7 +146,7 @@ const AuthPage = () => {
                   </span>
                 </div>
 
-                {/* ✅ BUTTON */}
+                {/* ✅ NORMAL LOGIN BUTTON */}
                 <Button
                   type="submit"
                   className="w-100"
@@ -123,9 +160,25 @@ const AuthPage = () => {
                 >
                   {loading ? "Logging in..." : "Log in"}
                 </Button>
+
+                {/* ✅ ✅ NEW ADMIN BUTTON */}
+                <Button
+                  onClick={loginAsAdmin}
+                  className="w-100 mt-2"
+                  disabled={loading}
+                  style={{
+                    background: "#111827",
+                    border: "none",
+                    padding: "10px",
+                    fontWeight: 500,
+                  }}
+                >
+                  👑 Login as Admin
+                </Button>
+
               </Form>
 
-              {/* ✅ SIGN UP LINK (FIXED 🔥) */}
+              {/* ✅ SIGN UP */}
               <div className="text-center mt-4">
                 <span style={{ fontSize: "14px", color: "#6b7280" }}>
                   Don’t have an account?
@@ -146,7 +199,7 @@ const AuthPage = () => {
             </div>
           </Col>
 
-          {/* ✅ RIGHT IMAGE */}
+          {/* ✅ RIGHT SIDE */}
           <Col md={7} className="d-none d-md-block">
             <div
               style={{

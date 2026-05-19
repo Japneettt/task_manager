@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, boards, inbox, planner, activity, users, notifications, cards, lists, teams, analytics
+from app.api.endpoints import auth, boards, inbox, planner, activity, users, notifications, cards, lists, teams, analytics, admin
  
 api_router = APIRouter()
  
@@ -16,6 +16,8 @@ api_router.include_router(teams.router, tags=["Teams"])
 
 api_router.include_router(activity.router, prefix="/activity")
 api_router.include_router(analytics.router, prefix="/analytics")
+
+api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
 
 
 

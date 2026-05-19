@@ -73,3 +73,36 @@ export const getActivity = () => api.get("/activity");
 export const getWorkload = () => api.get("/activity/workload");
 export const getProductivity = () => api.get("/activity/productivity");
 export const getTimeline = () => api.get("/activity/timeline");
+
+
+//
+// ✅ ✅ ✅ ADMIN APIs (NEW - MINIMAL ADD ✅)
+//
+
+// ✅ ADMIN STATS
+export const getAdminStats = () => api.get("/admin/stats");
+
+// ✅ USERS
+export const getAdminUsers = () => api.get("/admin/users");
+
+// ✅ USER ACTIONS
+export const toggleAdminRole = (userId: string) =>
+  api.patch(`/admin/users/${userId}/role`);
+
+export const disableUser = (userId: string) =>
+  api.patch(`/admin/users/${userId}/disable`);
+
+export const deleteUser = (userId: string) =>
+  api.delete(`/admin/users/${userId}`);
+
+// ✅ TEAMS
+export const getAdminTeams = () => api.get("/admin/teams");
+
+export const deleteTeam = (teamId: string) =>
+  api.delete(`/admin/teams/${teamId}`);
+
+// ✅ ACTIVITY
+export const getAdminActivity = () => api.get("/admin/activity");
+
+// ✅ ANALYTICS
+export const getAdminAnalytics = () => api.get("/admin/analytics");
