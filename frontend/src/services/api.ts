@@ -6,6 +6,8 @@ export const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+export const getNotifications = (params?: any) =>
+  api.get("/notifications", { params });
 
 // ✅ attach token automatically
 api.interceptors.request.use(
@@ -37,3 +39,19 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+// ✅ ✅ ✅ NOTIFICATIONS (NEW 🔥)
+
+export const getTeamInvites = () => api.get("/teams/invites");
+export const acceptTeamInvite = (id: string) =>
+  api.patch(`/teams/invites/${id}/accept`);
+export const rejectTeamInvite = (id: string) =>
+  api.patch(`/teams/invites/${id}/reject`);
+
+// (optional future)
+export const markNotificationRead = (id: string) =>
+  api.patch(`/notifications/${id}/read`);
+
+export const getActivity = () => api.get("/activity");
+export const getWorkload = () => api.get("/activity/workload");
+export const getProductivity = () => api.get("/activity/productivity");
+export const getTimeline = () => api.get("/activity/timeline");

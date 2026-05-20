@@ -25,4 +25,10 @@ class Card(Base):
     is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    due_date = Column(String, nullable=True)
+
     list = relationship("List", back_populates="cards")
+    # addedtoday
+    depends_on = Column(UUID(as_uuid=True), nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    priority = Column(String, default="Medium") 

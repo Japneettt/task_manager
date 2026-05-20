@@ -24,6 +24,7 @@ const AuthPage = () => {
         email,
         password,
       });
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
       // ✅ store JWT token
       localStorage.setItem("token", res.data.access_token);
@@ -133,6 +134,7 @@ const AuthPage = () => {
                   Don’t have an account?
                 </span>
                 <span
+                  onClick={() => navigate("/register")}
                   style={{
                     marginLeft: "5px",
                     color: "#2563eb",

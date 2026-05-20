@@ -16,8 +16,8 @@ const BoardsDashboard = () => {
   // ✅ FETCH BOARDS
   const fetchBoards = async () => {
     try {
-      const res = await api.get("/boards");
-      setBoards(res.data.boards);
+      const res = await api.get("/boards/personal");
+      setBoards(res.data);
     } catch (err) {
       console.error("Error fetching boards", err);
     }
@@ -64,7 +64,7 @@ const BoardsDashboard = () => {
 
         {/* ✅ BOARDS GRID */}
         <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-          {boards.map((board) => (
+          {/* {boards.map((board) => (
             <div
               key={board.id}
               onClick={() => navigate(`/boards/${board.id}`)}
@@ -83,6 +83,54 @@ const BoardsDashboard = () => {
               }}
             >
               {board.title}
+            </div>
+          ))} */}
+          {boards.map((board) => (
+            <div
+              key={board.id}
+              style={{
+                position: "relative",   // ✅ important
+                width: "220px",
+                height: "120px",
+                background: "linear-gradient(135deg, #4f46e5, #6366f1)",
+                color: "#fff",
+                borderRadius: "12px",
+                padding: "15px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "flex-end",
+                fontWeight: 600,
+                boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+              }}
+            >
+              {/* ✅ DELETE BUTTON */}
+              <span
+                onClick={async (e) => {
+                  e.stopPropagation(); // ✅ prevent navigation
+
+                  if (!confirm("Delete this board?")) return;
+
+                  await api.delete(`/boards/${board.id}`);
+                  fetchBoards(); // ✅ refresh list
+                }}
+                style={{
+                  position: "absolute",
+                  top: "8px",
+                  right: "10px",
+                  cursor: "pointer",
+                  fontSize: "18px",
+                }}
+              >
+                🗑️
+              </span>
+
+              {/* ✅ BOARD CLICK */}
+              <div
+                onClick={() => navigate(`/boards/${board.id}`)}
+                style={{ width: "100%" }}
+              >
+                {board.title}
+              </div>
             </div>
           ))}
         </div>

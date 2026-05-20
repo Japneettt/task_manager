@@ -130,13 +130,22 @@ const Navbar = () => {
           )}
         </span>
 
-        <span style={{ cursor: "pointer" }}>Planner</span>
-        <span style={{ cursor: "pointer" }}>Activity</span>
-      </div>
+
+        <span onClick={() => navigate("/planner")}>
+          Planner
+        </span>
+
+        <span
+  style={activeStyle("/activity")}
+  onClick={() => navigate("/activity")}
+>
+  Activity
+</span>
+</div>
 
       {/* ✅ PROFILE */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        
+
         {/* Avatar */}
         <div
           style={{
@@ -183,4 +192,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-

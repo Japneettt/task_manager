@@ -4,6 +4,12 @@ from app.models.notification import Notification
 from app.models.task import Task
 from app.models.boards import Board 
 from app.models.lists import List
+from app.models.card import Card
+from app.models.team import Team
+from app.models.team_member import TeamMember
+from app.models.team_invite import TeamInvite
+from app.models.otp import OTP
+# from app.models.board_member import 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from app.core.database import Base

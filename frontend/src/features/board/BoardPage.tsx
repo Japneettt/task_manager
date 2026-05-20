@@ -68,9 +68,17 @@ const BoardPage = () => {
     const newListId = result.destination.droppableId;
 
     try {
-      await api.patch(`/tasks/${taskId}/move`, null, {
-        params: { list_id: newListId },
-      });
+      // await api.patch(`/tasks/${taskId}/move`, null, {
+      //   params: { list_id: newListId },
+      // });
+
+      await api.patch(`/cards/${taskId}/move`, null, {
+        params: {
+          list_id: newListId,
+          position: result.destination.index
+        }
+      })
+
 
       fetchBoard(); // ✅ refresh
     } catch (err) {
@@ -85,11 +93,39 @@ const BoardPage = () => {
       <Navbar />
 
       <div style={{ padding: "20px" }}>
+
         <h3>{board.title}</h3>
+
+        {/* ✅ ADD LIST INPUT HERE */}
+        <input
+          placeholder="+ Add list"
+          style={{
+            marginBottom: "20px",
+            padding: "10px",
+            borderRadius: "8px",
+            border: "1px solid #ccc",
+          }}
+          onKeyDown={async (e) => {
+            if (e.key === "Enter") {
+              const input = e.target as HTMLInputElement;
+
+              if (!input.value) return;
+
+              await api.post(`/boards/${board.id}/lists`, {
+                title: input.value,
+                position: board.lists.length,
+              });
+
+
+              input.value = "";
+              fetchBoard();
+            }
+          }}
+        />
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div style={{ display: "flex", gap: "20px" }}>
-            
+
             {board.lists.map((list) => (
               <Droppable droppableId={String(list.id)} key={list.id}>
                 {(provided) => (
@@ -136,17 +172,21 @@ const BoardPage = () => {
 
                     {/* ✅ ADD TASK */}
                     <input
-                      placeholder="+ Add task"
+                      placeholder="+ Add card"
                       style={{ marginTop: "10px", width: "100%" }}
                       onKeyDown={async (e) => {
                         if (e.key === "Enter") {
                           const input = e.target as HTMLInputElement;
 
-                          await api.post("/tasks", null, {
-                            params: {
-                              title: input.value,
-                              list_id: list.id,
-                            },
+                          // await api.post("/tasks", null, {
+                          //   params: {
+                          //     title: input.value,
+                          //     list_id: list.id,
+                          //   },
+                          // });
+                          await api.post(`/lists/${list.id}/cards`, {
+                            title: input.value,
+                            position: list.cards.length,
                           });
 
                           input.value = "";

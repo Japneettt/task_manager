@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "../../components/layout/Navbar";
 import { api } from "../../services/api";
-
+import { useNavigate } from "react-router-dom";
 type User = {
   first_name: string;
   last_name: string;
@@ -17,7 +17,7 @@ type DashboardData = {
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
-
+  const navigate = useNavigate();
   // ✅ FETCH USER (REAL API)
   useEffect(() => {
     const fetchUser = async () => {
@@ -65,7 +65,7 @@ const Dashboard = () => {
 
   return (
     <div style={{ background: "#f6f8fb", minHeight: "100vh" }}>
-      
+
       {/* ✅ NAVBAR */}
       <Navbar />
 
@@ -82,6 +82,36 @@ const Dashboard = () => {
         <p style={{ color: "#6b7280" }}>
           Here’s what’s happening with your projects today.
         </p>
+
+        <button
+          onClick={() => navigate("/teams/create")}
+          style={{
+            padding: "12px 20px",
+            background: "#4f46e5",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            marginTop: "20px",
+            cursor: "pointer",
+          }}
+        >
+          Manage Team Collaboration 🚀
+        </button>
+
+        <button
+          onClick={() => navigate("/teams")}
+          style={{
+            padding: "12px 20px",
+            background: "#10b981",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            marginTop: "10px",
+            cursor: "pointer",
+          }}
+        >
+          View My Team Projects 👥
+        </button>
 
         {/* ✅ STATS */}
         <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
@@ -128,7 +158,7 @@ const Dashboard = () => {
 
         {/* ✅ LOWER SECTION */}
         <div style={{ display: "flex", gap: "20px", marginTop: "30px" }}>
-          
+
           {/* ✅ TASK LIST */}
           <div
             style={{
