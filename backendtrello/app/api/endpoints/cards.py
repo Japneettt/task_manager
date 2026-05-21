@@ -200,7 +200,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from uuid import UUID
 from typing import Optional
-import asyncio
+# import asyncio
 
 # ✅ DB
 from app.core.database import get_db
@@ -213,8 +213,8 @@ from app.models.notification import Notification
 # ✅ Schemas
 from app.schemas.card import CardCreate, CardRead
 
-# ✅ WebSocket Manager
-from app.websocket.manager import manager
+# # ✅ WebSocket Manager
+# from app.websocket.manager import manager
 
 router = APIRouter()
 
@@ -293,28 +293,29 @@ def create_card(
     db.refresh(card)
 
     # ✅ SEND REALTIME NOTIFICATION
-    if assigned_to:
+    # if assigned_to:
+    if card_assigned:
         notif = create_notification(
             db=db,
-            user_id=assigned_to,
+            user_id=card_assigned,
             title="Task Assigned",
             message=f"You were assigned: {card.title}",
             entity_id=card.id
         )
 
-        asyncio.create_task(
-            manager.send(
-                str(assigned_to),
-                {
-                    "type": "activity",
-                    "payload": {
-                        "title": notif.title,
-                        "message": notif.message,
-                        "created_at": notif.created_at.isoformat()
-                    }
-                }
-            )
-        )
+        # asyncio.create_task(
+        #     manager.send(
+        #         str(assigned_to),
+        #         {
+        #             "type": "activity",
+        #             "payload": {
+        #                 "title": notif.title,
+        #                 "message": notif.message,
+        #                 "created_at": notif.created_at.isoformat()
+        #             }
+        #         }
+        #     )
+        # )
 
     return card
 
@@ -415,15 +416,3 @@ def complete_card(card_id: UUID, db: Session = Depends(get_db)):
     db.refresh(card)
 
     return {"message": "Task completed ✅"}
-# ✅ COMPLETE CARD
-# @router.delete("/cards/{card_id}/complete")
-# def complete_card(card_id: UUID, db: Session = Depends(get_db)):
-#     card = db.query(Card).filter(Card.id == card_id).first()
-
-#     if not card:
-#         raise HTTPException(status_code=404, detail="Card not found")
-
-#     db.delete(card)
-#     db.commit()
-
-#     return {"message": "Task completed ✅"}

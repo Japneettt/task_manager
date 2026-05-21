@@ -1,205 +1,4 @@
-// import { useEffect, useState } from "react";
-// import { useParams } from "react-router-dom";
-// import { api } from "../../services/api";
-// import AddList from "../../features/board/AddList";
-// import AddCard from "../../features/board/AddCard";
-// import {
-//   DragDropContext,
-//   Droppable,
-//   Draggable
-// } from "@hello-pangea/dnd";
-// const TeamDashboard = () => {
-//   const { id } = useParams();
 
-//   const [team, setTeam] = useState<any>(null);
-//   const [boards, setBoards] = useState<any[]>([]);
-//   const [title, setTitle] = useState("");
-//   const [openBoard, setOpenBoard] = useState<any>(null);
-
-//   const fetchData = async () => {
-//     const teamRes = await api.get(`/teams/${id}`);
-//     setTeam(teamRes.data);
-
-//     const boardsRes = await api.get(`/boards/teams/${id}/boards`);
-//     setBoards(boardsRes.data);
-//   };
-
-//   useEffect(() => {
-//     fetchData();
-//   }, []);
-
-//   const createBoard = async () => {
-//     if (!title) return;
-
-//     await api.post("/boards", null, {
-//       params: {
-//         title,
-//         team_id: id,
-//       },
-//     });
-
-//     setTitle("");
-//     fetchData();
-//   };
-
-//   return (
-//     <div style={{ padding: "20px" }}>
-//       <h2 style={{ color: "#4f46e5" }}>{team?.name}</h2>
-
-//       {/* ✅ MEMBERS */}
-//       {team ? (
-//         <>
-//           <h4>Members</h4>
-//           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-//             {team.members?.map((m: any) => (
-//               <div
-//                 key={m.id}
-//                 style={{
-//                   background: "#e0e7ff",
-//                   padding: "8px 12px",
-//                   borderRadius: "20px"
-//                 }}
-//               >
-//                 {m.name}
-//               </div>
-//             ))}
-//           </div>
-
-//           <h4>Pending Invites</h4>
-//           {team.invites?.map((i: any, index: number) => (
-//             <div key={index}>📩 {i.email}</div>
-//           ))}
-//         </>
-//       ) : (
-//         <p>Loading...</p>
-//       )}
-
-//       {/* ✅ CREATE BOARD */}
-//       <h4>Create Board</h4>
-//       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-//         <input
-//           value={title}
-//           onChange={(e) => setTitle(e.target.value)}
-//           placeholder="Board name"
-//         />
-//         <button onClick={createBoard}>Create</button>
-//       </div>
-
-//       {/* ✅ BOARDS */}
-//       <h4>Boards</h4>
-//       <div style={{ display: "flex", gap: "20px" }}>
-//         {boards.map((b) => (
-//           <div
-//             key={b.id}
-//             onClick={async () => {
-//               const res = await api.get(`/boards/${b.id}`);
-//               setOpenBoard(res.data);
-//             }}
-//             style={{
-//               background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-//               color: "white",
-//               padding: "20px",
-//               borderRadius: "10px",
-//               cursor: "pointer",
-//               width: "200px",
-//             }}
-//           >
-//             {b.title}
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* ✅ ✅ ✅ BOARD MODAL */}
-//       {openBoard && (
-//         <div
-//           style={{
-//             position: "fixed",
-//             top: 0,
-//             left: 0,
-//             width: "100vw",
-//             height: "100vh",
-//             background: "rgba(0,0,0,0.5)",
-//             display: "flex",
-//             justifyContent: "center",
-//             alignItems: "center",
-//             zIndex: 1000,
-//           }}
-//         >
-//           <div
-//             style={{
-//               background: "white",
-//               padding: "20px",
-//               borderRadius: "10px",
-//               width: "90%",
-//               height: "80%",
-//               overflow: "auto",
-//             }}
-//           >
-//             {/* ✅ HEADER */}
-//             <div style={{ display: "flex", justifyContent: "space-between" }}>
-//               <h2>
-//                 {team?.name} → {openBoard.title}
-//               </h2>
-//               <button onClick={() => setOpenBoard(null)}>❌</button>
-//             </div>
-
-//             {/* ✅ LISTS */}
-//             <div style={{ display: "flex", gap: "20px" }}>
-
-//               {openBoard.lists.map((list: any) => (
-//                 <div
-//                   key={list.id}
-//                   style={{
-//                     background: "#f4f5f7",
-//                     padding: "10px",
-//                     borderRadius: "8px",
-//                     width: "250px",
-//                   }}
-//                 >
-//                   <h4>{list.title}</h4>
-
-//                   {/* ✅ CARDS */}
-//                   {list.cards.map((card: any) => (
-//                     <div
-//                       key={card.id}
-//                       style={{
-//                         background: "#fff",
-//                         padding: "8px",
-//                         borderRadius: "6px",
-//                         margin: "8px 0",
-//                       }}
-//                     >
-//                       {card.title}
-//                     </div>
-//                   ))}
-
-//                   {/* ✅ ADD CARD */}
-//                   <AddCard
-//                     listId={list.id}
-//                     boardId={openBoard.id}
-//                     refreshBoard={setOpenBoard}
-//                     members={team?.members}
-//                   />
-//                 </div>
-//               ))}
-
-//               {/* ✅ ADD LIST */}
-//               <div>
-//                 <AddList
-//                   boardId={openBoard.id}
-//                   refreshBoard={setOpenBoard}
-//                 />
-//               </div>
-
-//             </div>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default TeamDashboard;
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../services/api";
@@ -232,32 +31,40 @@ const TeamDashboard = () => {
       console.error("Fetch error:", err);
     }
   };
+useEffect(() => {
+  fetchData();
 
-  // ✅ ✅ WEBSOCKET + INITIAL LOAD
-  useEffect(() => {
+  const interval = setInterval(() => {
     fetchData();
+  }, 5000);
 
-    const userData = localStorage.getItem("user");
+  return () => clearInterval(interval);
+}, []);
+  // ✅ ✅ WEBSOCKET + INITIAL LOAD
+  // useEffect(() => {
+  //   fetchData();
 
-    if (!userData || userData === "undefined") return;
+  //   const userData = localStorage.getItem("user");
 
-    let user;
-    try {
-      user = JSON.parse(userData);
-    } catch {
-      return;
-    }
+  //   if (!userData || userData === "undefined") return;
 
-    if (!user?.id) return;
+  //   let user;
+  //   try {
+  //     user = JSON.parse(userData);
+  //   } catch {
+  //     return;
+  //   }
 
-    const ws = new WebSocket(`ws://localhost:8000/ws/activity/${user.id}`);
+  //   if (!user?.id) return;
 
-    ws.onmessage = () => {
-      fetchData(); // ✅ realtime update
-    };
+  //   const ws = new WebSocket(`ws://localhost:8000/ws/activity/${user.id}`);
 
-    return () => ws.close();
-  }, []);
+  //   ws.onmessage = () => {
+  //     fetchData(); // ✅ realtime update
+  //   };
+
+  //   return () => ws.close();
+  // }, []);
 
   // ✅ CREATE BOARD
   const createBoard = async () => {

@@ -12,7 +12,7 @@ from app.models.lists import List
 from app.models.user import User
 from app.models.card import Card
 
-router = APIRouter(prefix="", tags=["Boards"])
+router = APIRouter(prefix="/boards", tags=["Boards"])
 from app.schemas.board import BoardCreate, BoardRead
 
 @router.post("/",response_model=BoardRead)
@@ -31,6 +31,20 @@ def create_board(
     db.add(board)
     db.commit()
     db.refresh(board)
+    
+    # ✅ ✅ CREATE DEFAULT LISTS
+    default_lists = ["ToDo", "InProgress", "Done"]
+
+    for index, name in enumerate(default_lists):
+        lst = List(
+            title=name,
+            board_id=board.id,
+            position=index
+        )
+        db.add(lst)
+
+    db.commit()
+
     return board
     # return {
     #     "id": str(board.id),
@@ -38,30 +52,7 @@ def create_board(
     #     "owner_id": str(board.owner_id),
     #     "team_id": str(board.team_id) if board.team_id else None
     # }
-# @router.post("/")
-# def create_board(
-#     title: str,
-#     team_id: Optional[UUID] = None,
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_user),
-# ):
-#     # ✅ create board
-#     board = Board(
-#         title=title,
-#         owner_id=current_user.id,
-#         team_id=team_id
-#     )
 
-#     db.add(board)
-#     db.commit()
-#     db.refresh(board)
-
-#     return {
-#     "id": str(board.id),
-#     "title": board.title,
-#     "owner_id": str(board.owner_id),
-#     "team_id": str(board.team_id) if board.team_id else None
-# }
 
 
 # @router.get("/")
@@ -81,7 +72,8 @@ def get_personal_boards(
 ):
     boards = db.query(Board).filter(
         Board.owner_id == current_user.id,
-        Board.team_id == None
+        Board.team_id == None,
+        Board.archived == False
     ).all()
 
     return boards
@@ -109,6 +101,72 @@ def get_team_boards(
     return boards
 
 
+@router.delete("/{board_id}")
+def delete_board(
+    board_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    board = db.query(Board).filter(Board.id == board_id).first()
+
+    if not board:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    # ✅ PERSONAL BOARD
+    if board.team_id is None:
+        if board.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not allowed")
+
+    # ✅ TEAM BOARD
+    else:
+        from app.models.team_member import TeamMember
+
+        member = db.query(TeamMember).filter(
+            TeamMember.team_id == board.team_id,
+            TeamMember.user_id == current_user.id,
+            TeamMember.role == "admin"   # ✅ only admin can delete
+        ).first()
+
+        if not member:
+            raise HTTPException(status_code=403, detail="Not allowed")
+
+    # ✅ DELETE BOARD (outside both conditions)
+    db.delete(board)
+    db.commit()
+
+    return {"message": "Board deleted"}
+
+@router.patch("/{board_id}/archive")
+def archive_board(
+    board_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    board = db.query(Board).filter(Board.id == board_id).first()
+
+    if not board:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    if board.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    board.archived = True
+    db.commit()
+
+    return {"message": "Board archived"}
+
+
+@router.get("/archived")
+def get_archived_boards(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    boards = db.query(Board).filter(
+        Board.owner_id == current_user.id,
+        Board.archived == True
+    ).all()
+
+    return boards
 
 @router.get("/{board_id}")
 def get_board(
@@ -168,41 +226,3 @@ def get_board(
         })
 
     return result
-
-@router.delete("/{board_id}")
-def delete_board(
-    board_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    board = db.query(Board).filter(Board.id == board_id).first()
-
-    if not board:
-        raise HTTPException(status_code=404, detail="Board not found")
-
-    # ✅ PERSONAL BOARD
-    if board.team_id is None:
-        if board.owner_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not allowed")
-
-    # ✅ TEAM BOARD
-    else:
-        from app.models.team_member import TeamMember
-
-        member = db.query(TeamMember).filter(
-            TeamMember.team_id == board.team_id,
-            TeamMember.user_id == current_user.id,
-            TeamMember.role == "admin"   # ✅ only admin can delete
-        ).first()
-
-        if not member:
-            raise HTTPException(status_code=403, detail="Not allowed")
-
-    # ✅ DELETE BOARD (outside both conditions)
-    db.delete(board)
-    db.commit()
-
-    return {"message": "Board deleted"}
-
-
-

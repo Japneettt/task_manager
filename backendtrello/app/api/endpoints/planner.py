@@ -41,10 +41,10 @@ def get_planner_data(
 ):
     today = date.today()
 
-    # cards = db.query(Card).filter(
-    #     Card.assigned_to == current_user.id
-    # ).all()
-    cards = db.query(Card).all()
+    cards = db.query(Card).filter(
+        Card.assigned_to == current_user.id
+    ).all()
+    # cards = db.query(Card).all()
 
     assigned = []
     overdue = []

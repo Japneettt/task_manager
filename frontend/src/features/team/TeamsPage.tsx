@@ -10,33 +10,42 @@ const TeamsPage = () => {
     const res = await api.get("/teams");
     setTeams(res.data);
   };
-
-useEffect(() => {
+  useEffect(() => {
   fetchTeams();
 
-  const userData = localStorage.getItem("user");
-
-  // ✅ FIX: check for valid JSON
-  if (!userData || userData === "undefined") return;
-
-  let user;
-  try {
-    user = JSON.parse(userData);
-  } catch (err) {
-    console.error("Invalid user JSON:", userData);
-    return;
-  }
-
-  if (!user?.id) return;
-
-  const ws = new WebSocket(`ws://localhost:8000/ws/activity/${user.id}`);
-
-  ws.onmessage = () => {
+  const interval = setInterval(() => {
     fetchTeams();
-  };
+  }, 5000);
 
-  return () => ws.close();
+  return () => clearInterval(interval);
 }, []);
+
+// useEffect(() => {
+//   fetchTeams();
+
+//   const userData = localStorage.getItem("user");
+
+//   // ✅ FIX: check for valid JSON
+//   if (!userData || userData === "undefined") return;
+
+//   let user;
+//   try {
+//     user = JSON.parse(userData);
+//   } catch (err) {
+//     console.error("Invalid user JSON:", userData);
+//     return;
+//   }
+
+//   if (!user?.id) return;
+
+//   const ws = new WebSocket(`ws://localhost:8000/ws/activity/${user.id}`);
+
+//   ws.onmessage = () => {
+//     fetchTeams();
+//   };
+
+//   return () => ws.close();
+// }, []);
 
   return (
     <div style={{ padding: "20px" }}>

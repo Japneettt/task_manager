@@ -12,11 +12,21 @@ const BoardsDashboard = () => {
   const [boards, setBoards] = useState<Board[]>([]);
   const [title, setTitle] = useState("");
   const navigate = useNavigate();
+  const [showArchived, setShowArchived] = useState(false);
 
   // ✅ FETCH BOARDS
+  // const fetchBoards = async () => {
+  //   try {
+  //     const res = await api.get("/boards/personal");
+  //     setBoards(res.data);
+  //   } catch (err) {
+  //     console.error("Error fetching boards", err);
+  //   }
+  // };
   const fetchBoards = async () => {
     try {
-      const res = await api.get("/boards/personal");
+      const url = showArchived ? "/boards/archived" : "/boards/personal";
+      const res = await api.get(url);
       setBoards(res.data);
     } catch (err) {
       console.error("Error fetching boards", err);
@@ -31,9 +41,13 @@ const BoardsDashboard = () => {
   const createBoard = async () => {
     if (!title) return;
 
-    await api.post("/boards", null, {
-      params: { title },
+
+    await api.post("/boards", {
+      title: title,
+      description: null,
+      team_id: null
     });
+
 
     setTitle("");
     fetchBoards();
@@ -45,6 +59,23 @@ const BoardsDashboard = () => {
 
       <div style={{ padding: "20px" }}>
         <h2>Boards</h2>
+        <button
+          onClick={() => {
+            setShowArchived(!showArchived);
+            setTimeout(fetchBoards, 0);
+          }}
+          style={{
+            marginBottom: "15px",
+            padding: "8px 12px",
+            borderRadius: "6px",
+            border: "none",
+            background: "#6366f1",
+            color: "#fff",
+            cursor: "pointer"
+          }}
+        >
+          {showArchived ? "Back to Active Boards" : "View Archived"}
+        </button>
 
         {/* ✅ CREATE BOARD */}
         <div style={{ marginBottom: "20px" }}>
@@ -103,26 +134,45 @@ const BoardsDashboard = () => {
                 boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
               }}
             >
-              {/* ✅ DELETE BUTTON */}
-              <span
-                onClick={async (e) => {
-                  e.stopPropagation(); // ✅ prevent navigation
-
-                  if (!confirm("Delete this board?")) return;
-
-                  await api.delete(`/boards/${board.id}`);
-                  fetchBoards(); // ✅ refresh list
-                }}
+              {/* ✅ ACTION ICONS */}
+              <div
                 style={{
                   position: "absolute",
                   top: "8px",
                   right: "10px",
-                  cursor: "pointer",
-                  fontSize: "18px",
+                  display: "flex",
+                  gap: "10px"
                 }}
               >
-                🗑️
-              </span>
+
+                {/* 🗑 DELETE */}
+                <span
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm("Delete this board?")) return;
+
+                    await api.delete(`/boards/${board.id}`);
+                    fetchBoards();
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
+                  🗑️
+                </span>
+
+                {/* 📦 ARCHIVE */}
+                <span
+                  onClick={async (e) => {
+                    e.stopPropagation();
+
+                    await api.patch(`/boards/${board.id}/archive`);
+                    fetchBoards();
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
+                  {showArchived ? "♻️" : "📦"}
+                </span>
+
+              </div>
 
               {/* ✅ BOARD CLICK */}
               <div

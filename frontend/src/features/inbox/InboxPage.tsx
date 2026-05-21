@@ -64,41 +64,49 @@ useEffect(() => {
   fetchNotifications();
   fetchInvites();
 
-  const userData = localStorage.getItem("user");
+  const interval = setInterval(() => {
+    fetchNotifications();
+    fetchInvites();
+  }, 5000); // ✅ every 5 sec
 
-  // ✅ FIX: safe check
-  if (!userData || userData === "undefined") {
-    console.log("❌ Invalid user in storage");
-    return;
-  }
-
-  let user;
-  try {
-    user = JSON.parse(userData);
-  } catch {
-    console.log("❌ JSON parse failed");
-    return;
-  }
-
-  if (!user?.id) return;
-
-  const ws = new WebSocket(`ws://localhost:8000/ws/activity/${user.id}`);
-
-  ws.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-
-      if (data.type === "team_update") {
-        fetchInvites();
-        fetchNotifications();
-      }
-    } catch (err) {
-      console.error("WS parse error", err);
-    }
-  };
-
-  return () => ws.close();
+  return () => clearInterval(interval);
 }, [category]);
+
+//   const userData = localStorage.getItem("user");
+
+//   // ✅ FIX: safe check
+//   if (!userData || userData === "undefined") {
+//     console.log("❌ Invalid user in storage");
+//     return;
+//   }
+
+//   let user;
+//   try {
+//     user = JSON.parse(userData);
+//   } catch {
+//     console.log("❌ JSON parse failed");
+//     return;
+//   }
+
+//   if (!user?.id) return;
+
+//   const ws = new WebSocket(`ws://localhost:8000/ws/activity/${user.id}`);
+
+//   ws.onmessage = (event) => {
+//     try {
+//       const data = JSON.parse(event.data);
+
+//       if (data.type === "team_update") {
+//         fetchInvites();
+//         fetchNotifications();
+//       }
+//     } catch (err) {
+//       console.error("WS parse error", err);
+//     }
+//   };
+
+//   return () => ws.close();
+// }, [category]);
 
   // ✅ MARK READ
   const markAsRead = async (id: string) => {
@@ -312,153 +320,3 @@ const handleAcceptInvite = async (inviteId: string) => {
 
 export default InboxPage;
 
-
-// import { useEffect, useState } from "react";
-// import Navbar from "../../components/layout/Navbar";
-// import { getNotifications, api } from "../../services/api";
-
-// type Notification = {
-//   id: string;
-//   title: string;
-//   message: string;
-//   is_read: boolean;
-// };
-
-// const InboxPage = () => {
-//   const [notifications, setNotifications] = useState<Notification[]>([]);
-//   const [selected, setSelected] = useState<Notification | null>(null);
-//   const [filter, setFilter] = useState("All");
-//   const unreadCount = notifications.filter(n => !n.is_read).length;
-//   // ✅ FETCH
-//   const fetchNotifications = async () => {
-//     try {
-//       const res = await getNotifications();
-
-//       const data = Array.isArray(res.data)
-//         ? res.data
-//         : res.data.notifications || [];
-
-//       setNotifications(data);
-//     } catch (err) {
-//       console.error("Error fetching notifications", err);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchNotifications();
-//   }, []);
-
-//   // ✅ MARK READ
-//   const markAsRead = async (id: string) => {
-//     try {
-//       await api.patch(`/notifications/${id}/read`);
-
-//       setNotifications(prev =>
-//         prev.map(n =>
-//           n.id === id ? { ...n, is_read: true } : n
-//         )
-//       );
-//     } catch (err) {
-//       console.error(err);
-//     }
-//   };
-
-//   // ✅ CLICK HANDLER
-//   const handleClick = (item: Notification) => {
-//     setSelected(item);
-
-//     if (!item.is_read) {
-//       markAsRead(item.id);
-//     }
-//   };
-
-//   // ✅ FILTER
-//   const filteredNotifications = notifications.filter(n =>
-//     filter === "Unread" ? !n.is_read : true
-//   );
-
-
-
-//   return (
-//     <div style={{ background: "#f6f8fb", minHeight: "100vh" }}>
-//       <Navbar />
-
-//       <div style={{ padding: "24px" }}>
-//         <h2>Inbox 🔔 ({unreadCount})</h2>
-
-//         {/* ✅ FILTER */}
-//         <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-//           {["All", "Unread"].map(item => (
-//             <span
-//               key={item}
-//               onClick={() => setFilter(item)}
-//               style={{
-//                 padding: "8px 14px",
-//                 borderRadius: "20px",
-//                 background: filter === item ? "#e5e7eb" : "transparent",
-//                 cursor: "pointer",
-//                 fontWeight: filter === item ? 600 : 400,
-//               }}
-//             >
-//               {item}
-//             </span>
-//           ))}
-//         </div>
-
-//         {/* ✅ MAIN */}
-//         <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-          
-//           {/* LEFT */}
-//           <div style={{ flex: 2 }}>
-//             {filteredNotifications.length === 0 && (
-//               <p>No notifications yet</p>
-//             )}
-
-//             {filteredNotifications.map(item => (
-//               <div
-//                 key={item.id}
-//                 onClick={() => handleClick(item)}
-//                 style={{
-//                   background: item.is_read ? "#f1f5f9" : "#e0edff",
-//                   padding: "16px",
-//                   marginBottom: "10px",
-//                   borderRadius: "8px",
-//                   cursor: "pointer",
-//                   borderLeft: item.is_read
-//                     ? "4px solid transparent"
-//                     : "4px solid #4f46e5",
-//                 }}
-//               >
-//                 <h6 style={{ margin: 0 }}>{item.title}</h6>
-//                 <p style={{ marginTop: "6px", color: "#6b7280" }}>
-//                   {item.message}
-//                 </p>
-//               </div>
-//             ))}
-//           </div>
-
-//           {/* RIGHT */}
-//           <div
-//             style={{
-//               flex: 1,
-//               background: "#fff",
-//               padding: "20px",
-//               borderRadius: "8px",
-//             }}
-//           >
-//             {selected ? (
-//               <>
-//                 <h4>{selected.title}</h4>
-//                 <p>{selected.message}</p>
-//               </>
-//             ) : (
-//               <p>Select a notification</p>
-//             )}
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default InboxPage;

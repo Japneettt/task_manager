@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.core.database import Base
@@ -12,5 +12,6 @@ class Team(Base):
     name = Column(String, nullable=False)
     type = Column(String, nullable=True)  # public/private/company
     description = Column(String, nullable=True)
+    archived = Column(Boolean, default=False)
 
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))

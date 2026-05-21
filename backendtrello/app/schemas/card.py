@@ -1,19 +1,4 @@
-# from pydantic import BaseModel
-# from uuid import UUID
 
-# class CardCreate(BaseModel):
-#     title: str
-#     description: str | None = None
-#     position: int
-
-# class CardRead(BaseModel):
-#     id: UUID
-#     title: str
-#     description: str | None
-#     position: int
-
-#     class Config:
-#         from_attributes = True
 from pydantic import BaseModel
 from uuid import UUID
 from typing import Optional
@@ -24,8 +9,8 @@ class CardCreate(BaseModel):
     title: str
     description: Optional[str] = None
     position: int = 0
-    
-    assigned_to: Optional[str] = None   # ✅ email
+    assigned_to: Optional[UUID] = None
+    # assigned_to: Optional[str] = None   # ✅ email
     priority: Optional[str] = "Medium"
     due_date: Optional[datetime] = None
 

@@ -6,7 +6,8 @@ from app.models.lists import List
 from app.models.boards import Board
 from app.models.team_member import TeamMember
 from app.api.endpoints.users import get_current_user
-
+from uuid import UUID
+from sqlalchemy import func
 # router = APIRouter(tags=["Analytics"])
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 @router.get("/boards")
@@ -71,3 +72,42 @@ def board_stats(
                 "performance": 0.0,
             },
         }
+
+
+
+
+@router.get("/team/{team_id}")
+def get_team_stats(team_id: UUID, db: Session = Depends(get_db)):
+
+    # ✅ get all boards of team
+    boards = db.query(Board).filter(Board.team_id == team_id).all()
+    board_ids = [b.id for b in boards]
+
+    # ✅ get lists
+    lists = db.query(List).filter(List.board_id.in_(board_ids)).all()
+    list_map = {l.id: l.title for l in lists}
+    list_ids = list_map.keys()
+
+    # ✅ get cards
+    cards = db.query(Card).filter(Card.list_id.in_(list_ids)).all()
+
+    # ✅ counters
+    done = 0
+    in_progress = 0
+    todo = 0
+
+    for c in cards:
+        list_name = list_map.get(c.list_id, "").lower()
+
+        if "done" in list_name:
+            done += 1
+        elif "progress" in list_name:
+            in_progress += 1
+        else:
+            todo += 1
+
+    return {
+        "done": done,
+        "in_progress": in_progress,
+        "todo": todo
+    }
