@@ -1,5 +1,7 @@
+
 import smtplib
 from email.mime.text import MIMEText
+
  
 SMTP_EMAIL = "babita2000rana@gmail.com"
 SMTP_PASSWORD = "neda axmw xayj iqlj"
@@ -22,3 +24,15 @@ def send_invite_email(to_email: str, link: str):
  
     except Exception as e:
         print("❌ Email failed:", e)
+
+def send_otp(email, otp):
+    msg = MIMEText(f"Your OTP is: {otp}")
+    msg["Subject"] = "TaskFlow OTP Verification"
+    msg["From"] = SMTP_EMAIL
+    msg["To"] = email
+ 
+    server = smtplib.SMTP("smtp.gmail.com", 587)
+    server.starttls()
+    server.login(SMTP_EMAIL, SMTP_PASSWORD)
+    server.send_message(msg)
+    server.quit()

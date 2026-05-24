@@ -41,7 +41,7 @@ const AdminDashboard = () => {
       return;
     }
 
-    if (!user?.is_admin) {
+    if (user?.is_admin !== true) {
       navigate("/");
       return;
     }
@@ -121,7 +121,7 @@ const AdminDashboard = () => {
               nameKey="name"
               outerRadius={90}
             >
-              {pieData.map((entry: any, index: number) => (
+              {pieData.map((_, index: number) => (
                 <Cell key={index} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>

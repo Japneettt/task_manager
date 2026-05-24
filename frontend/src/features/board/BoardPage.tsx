@@ -31,7 +31,16 @@ type Board = {
   lists: List[];
 };
 
-const STATIC_LISTS = ["Pending", "Progress", "Completed"];
+const STATIC_LISTS = ["To Do", "In Progress", "Done"];
+
+const normalizeTitle = (t: string | null | undefined) => {
+  if (!t) return t;
+  const s = t.trim().toLowerCase();
+  if (["pending", "todo", "to do"].includes(s)) return "To Do";
+  if (["progress", "in progress", "doing", "inprogress"].includes(s)) return "In Progress";
+  if (["completed", "done"].includes(s)) return "Done";
+  return t.trim();
+};
 
 const BoardPage = () => {
   const [board, setBoard] = useState<Board | null>(null);
@@ -51,7 +60,7 @@ const BoardPage = () => {
       const res = await api.get(`/boards/${id}`);
       const data = res.data;
 
-      let lists = data.lists.map((l: any) => ({
+      let listsRaw = data.lists.map((l: any) => ({
         id: String(l.id),
         title: l.title,
         position: l.position,
@@ -64,13 +73,49 @@ const BoardPage = () => {
         })),
       }));
 
-      // ✅ Ensure static lists exist
-      await ensureStaticLists(data.id, lists);
+      // Ensure canonical lists exist on backend (this will also merge duplicates)
+      await ensureStaticLists(data.id, listsRaw);
+
+      // Re-fetch lists after ensure to get merged/normalized results
+      const fresh = await api.get(`/boards/${id}`);
+      const freshLists = fresh.data.lists || [];
+
+      // Build map of canonical title -> list, merging duplicates if any
+      const listMap: Record<string, any> = {};
+      for (const l of freshLists) {
+        const canon = normalizeTitle(l.title) || l.title;
+        if (!listMap[canon]) {
+          listMap[canon] = {
+            id: String(l.id),
+            title: canon,
+            position: l.position,
+            cards: (l.cards || []).map((c: any) => ({
+              id: String(c.id),
+              title: c.title,
+              description: c.description || "",
+              due_date: c.due_date || "",
+              priority: c.priority || "low",
+            })),
+          };
+        } else {
+          // merge cards
+          listMap[canon].cards.push(...(l.cards || []).map((c: any) => ({
+            id: String(c.id),
+            title: c.title,
+            description: c.description || "",
+            due_date: c.due_date || "",
+            priority: c.priority || "low",
+          })));
+        }
+      }
+
+      // Ensure order: Pending, In Progress, Completed
+      const ordered = STATIC_LISTS.map((t) => listMap[t] || { id: `${t}-empty`, title: t, position: 0, cards: [] });
 
       setBoard({
         id: data.id,
         title: data.title,
-        lists,
+        lists: ordered,
       });
     } catch (err) {
       console.error("Error fetching board", err);

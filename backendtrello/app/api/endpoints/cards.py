@@ -1,210 +1,325 @@
+ 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import select, or_
+from sqlalchemy import select
 from uuid import UUID
 from typing import Optional
-from datetime import datetime
+import asyncio
 
+# WebSocket manager
+from app.websocket.manager import manager
+# import asyncio
+ 
+# ✅ DB
 from app.core.database import get_db
+from app.api.endpoints.users import get_current_user
+ 
+# ✅ Models
 from app.models.card import Card
 from app.models.lists import List
+from app.models.notification import Notification
 from app.models.boards import Board
-from app.schemas.card import CardCreate, CardRead
-from app.services.notification_service import create_notification
-from app.api.endpoints.users import get_current_user
+from app.models.team_member import TeamMember
 from app.models.user import User
-
+ 
+# ✅ Schemas
+from app.schemas.card import CardCreate, CardRead
+ 
+# # ✅ WebSocket Manager
+# from app.websocket.manager import manager
+ 
 router = APIRouter()
+ 
+ 
+# ✅ CREATE NOTIFICATION
+def create_notification(db, user_id, title, message, entity_id=None):
+    notif = Notification(
+        user_id=user_id,
+        title=title,
+        message=message,
+        entity_id=entity_id
+    )
+    db.add(notif)
+    db.commit()
+    db.refresh(notif)
 
+    return notif
+ 
+ 
 # ✅ CREATE CARD
 @router.post("/lists/{list_id}/cards", response_model=CardRead)
 def create_card(
     list_id: UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+ 
+    # ✅ Query params
     title: Optional[str] = Query(None),
     description: Optional[str] = Query(None),
     assigned_to: Optional[UUID] = Query(None),
     due_date: Optional[str] = Query(None),
-    data: Optional[CardCreate] = None,
+ 
+    # ✅ Body input
+    data: CardCreate = None,
 ):
-
+    # ✅ Validate list
     lst = db.execute(
         select(List).where(List.id == list_id)
     ).scalars().first()
-
+ 
     if not lst:
         raise HTTPException(status_code=404, detail="List not found")
-
+ 
+    # ✅ Resolve data source
     if data:
         card_title = data.title
         card_desc = data.description
         card_position = data.position
-        card_due_date = data.due_date or due_date
-        assigned_value = data.assigned_to
+        card_assigned = data.assigned_to
+        card_due_date = data.due_date
     elif title:
         card_title = title
         card_desc = description
         card_position = 0
-        card_due_date = due_date
-        assigned_value = assigned_to
+        card_assigned = assigned_to
+        card_due_date =due_date
     else:
         raise HTTPException(status_code=400, detail="Title required")
+ 
+    board = db.query(Board).filter(Board.id == lst.board_id).first()
+    if not board:
+        raise HTTPException(status_code=404, detail="Board not found")
 
-    card_priority = data.priority if data else None
+    if card_assigned:
+        # Personal boards should only assign tasks to the owner.
+        if board.team_id is None and card_assigned != current_user.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot assign personal board tasks to a user before acceptance"
+            )
 
+        # Team boards should only assign tasks to accepted team members.
+        if board.team_id is not None and card_assigned != board.owner_id:
+            membership = db.query(TeamMember).filter(
+                TeamMember.team_id == board.team_id,
+                TeamMember.user_id == card_assigned
+            ).first()
+            if not membership:
+                raise HTTPException(
+                    status_code=400,
+                    detail="User must be an accepted team member to assign this task"
+                )
+
+    # ✅ Create card
     card = Card(
         title=card_title,
         description=card_desc,
         position=card_position,
         list_id=list_id,
         board_id=lst.board_id,
-        assigned_to=assigned_value,
-        due_date=card_due_date,
-        priority=card_priority,
+        assigned_to=card_assigned,
+        due_date=str(card_due_date) if card_due_date else None   # ✅ FIXED
     )
-
+    print("FINAL DATA →", {
+    "title": card_title,
+    "assigned_to": card_assigned,
+    "due_date": card_due_date
+})
+ 
     db.add(card)
     db.commit()
     db.refresh(card)
-
-    if assigned_value:
-        create_notification(
+ 
+    # ✅ SEND REALTIME NOTIFICATION
+    # if assigned_to:
+    if card_assigned:
+        notif = create_notification(
             db=db,
-            user_id=assigned_value,
-            title="New Task Assigned",
+            user_id=card_assigned,
+            title="Task Assigned",
             message=f"You were assigned: {card.title}",
-            type="assignment",
-            category="personal",
             entity_id=card.id
         )
-        db.commit()
-
+ 
+        # asyncio.create_task(
+        #     manager.send(
+        #         str(assigned_to),
+        #         {
+        #             "type": "activity",
+        #             "payload": {
+        #                 "title": notif.title,
+        #                 "message": notif.message,
+        #                 "created_at": notif.created_at.isoformat()
+        #             }
+        #         }
+        #     )
+        # )
+ 
     return card
-
-
-# ✅ UPDATE CARD
-@router.patch("/cards/{card_id}", response_model=CardRead)
-def update_card(
-    card_id: UUID,
-    data: CardCreate,
-    db: Session = Depends(get_db),
-):
-
+ 
+ 
+# ✅ GET CARD
+@router.get("/cards/{card_id}", response_model=CardRead)
+def get_card(card_id: UUID, db: Session = Depends(get_db)):
     card = db.query(Card).filter(Card.id == card_id).first()
-
+ 
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-
+ 
+    return card
+ 
+ 
+# ✅ UPDATE CARD
+@router.patch("/cards/{card_id}", response_model=CardRead)
+def update_card(card_id: UUID, data: CardCreate, db: Session = Depends(get_db)):
+    card = db.query(Card).filter(Card.id == card_id).first()
+ 
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+ 
     card.title = data.title
     card.description = data.description
     card.position = data.position
-    card.due_date = data.due_date
-
-    new_assigned = None
-
-    if data.assigned_to:
-        if isinstance(data.assigned_to, str):
-            user = db.query(User).filter(User.email == data.assigned_to).first()
-            if user:
-                new_assigned = user.id
-        else:
-            new_assigned = data.assigned_to
-
-    if new_assigned:
-        card.assigned_to = new_assigned
-
-        create_notification(
-            db=db,
-            user_id=new_assigned,
-            title="Task Assigned",
-            message=f"You were assigned: {card.title}",
-            type="assignment",
-            category="personal",
-            entity_id=card.id
-        )
-
-    elif data.assigned_to is None:
-        card.assigned_to = None
-
+ 
     db.commit()
     db.refresh(card)
-
+ 
     return card
-
-
-# ✅ MOVE CARD (DRAG & DROP)
-@router.patch("/cards/{card_id}/move", response_model=None)
+ 
+ 
+# ✅ DELETE CARD
+@router.delete("/cards/{card_id}")
+def delete_card(card_id: UUID, db: Session = Depends(get_db)):
+    card = db.query(Card).filter(Card.id == card_id).first()
+ 
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+ 
+    db.delete(card)
+    db.commit()
+ 
+    return {"message": "Card deleted successfully"}
+ 
+ 
+# ✅ MOVE CARD
+@router.patch("/cards/{card_id}/move")
 def move_card(
     card_id: UUID,
     list_id: UUID,
     position: int = 0,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     card = db.query(Card).filter(Card.id == card_id).first()
-
+ 
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-
+ 
     card.list_id = list_id
     card.position = position
-
-    cards_in_list = db.query(Card).filter(
-        Card.list_id == list_id,
-        Card.id != card_id
-    ).order_by(Card.position).all()
-
-    for idx, c in enumerate(cards_in_list):
-        if idx >= position:
-            c.position = idx + 1
-        else:
-            c.position = idx
-
-    new_list = db.query(List).filter(List.id == list_id).first()
-
-    if new_list and new_list.title.lower() == "completed":
-        card.completed_at = datetime.utcnow()
-
-        create_notification(
-            db=db,
-            user_id=current_user.id,
-            title="Task Completed",
-            message=f"You completed '{card.title}'",
-            type="completion",
-            category="personal",
-            entity_id=card.id
-        )
-
+ 
     db.commit()
+    db.refresh(card)
+    # Notify relevant users about the move (assigned user and board owner)
+    try:
+        board = db.query(Board).filter(Board.id == card.board_id).first()
+        recipients = set()
+        if card.assigned_to:
+            recipients.add(str(card.assigned_to))
+        if board and board.owner_id:
+            recipients.add(str(board.owner_id))
+        # If this is a team board, notify all team members
+        if board and board.team_id:
+            members = db.query(TeamMember).filter(TeamMember.team_id == board.team_id).all()
+            for m in members:
+                recipients.add(str(m.user_id))
 
-    return {"message": "Card moved ✅"}
+        payload = {
+            "type": "card_moved",
+            "payload": {
+                "card_id": str(card.id),
+                "board_id": str(card.board_id),
+                "list_id": str(card.list_id),
+                "position": card.position,
+            },
+        }
 
+        for user_id in recipients:
+            # fire-and-forget
+            asyncio.create_task(manager.send_to_user(user_id, payload))
+    except Exception:
+        pass
 
-# ✅ TASK SUMMARY (FIXED ✅)
-@router.get("/tasks/summary")
-def get_tasks_summary(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    board_join = db.query(Card).join(Board, Card.board_id == Board.id)
+    return {"message": "Card moved"}
+ 
+ 
+# ✅ UPDATE DUE DATE
+@router.patch("/cards/{card_id}/update-due-date")
+def update_due_date(card_id: UUID, due_date: str, db: Session = Depends(get_db)):
+    card = db.query(Card).filter(Card.id == card_id).first()
+ 
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+ 
+    card.due_date = due_date
+ 
+    db.commit()
+    db.refresh(card)
 
-    pending = board_join.filter(
-        or_(
-            Board.owner_id == current_user.id,
-            Card.assigned_to == current_user.id,
-        ),
-        Card.completed_at == None
-    ).all()
+    # Notify relevant users that card was updated
+    try:
+        board = db.query(Board).filter(Board.id == card.board_id).first()
+        recipients = set()
+        if card.assigned_to:
+            recipients.add(str(card.assigned_to))
+        if board and board.owner_id:
+            recipients.add(str(board.owner_id))
+        if board and board.team_id:
+            members = db.query(TeamMember).filter(TeamMember.team_id == board.team_id).all()
+            for m in members:
+                recipients.add(str(m.user_id))
 
-    completed = board_join.filter(
-        or_(
-            Board.owner_id == current_user.id,
-            Card.assigned_to == current_user.id,
-        ),
-        Card.completed_at != None
-    ).all()
+        payload = {"type": "card_updated", "payload": {"card_id": str(card.id), "board_id": str(card.board_id)}}
+        for user_id in recipients:
+            asyncio.create_task(manager.send_to_user(user_id, payload))
+    except Exception:
+        pass
 
-    return {
-        "pending": pending,
-        "completed": completed
-    }
+    return {"message": "Due date updated"}
+ 
+from datetime import datetime
+ 
+@router.patch("/cards/{card_id}/complete")
+def complete_card(card_id: UUID, db: Session = Depends(get_db)):
+    card = db.query(Card).filter(Card.id == card_id).first()
+ 
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+ 
+    # ✅ mark as completed instead of deleting
+    card.completed_at = datetime.utcnow()
+ 
+    db.commit()
+    db.refresh(card)
+
+    # Notify relevant users so dashboards/planner refresh
+    try:
+        board = db.query(Board).filter(Board.id == card.board_id).first()
+        recipients = set()
+        if card.assigned_to:
+            recipients.add(str(card.assigned_to))
+        if board and board.owner_id:
+            recipients.add(str(board.owner_id))
+        if board and board.team_id:
+            members = db.query(TeamMember).filter(TeamMember.team_id == board.team_id).all()
+            for m in members:
+                recipients.add(str(m.user_id))
+
+        payload = {"type": "card_completed", "payload": {"card_id": str(card.id), "board_id": str(card.board_id)}}
+        for user_id in recipients:
+            asyncio.create_task(manager.send_to_user(user_id, payload))
+    except Exception:
+        pass
+
+    return {"message": "Task completed ✅"}
+ 
+ 

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { api } from "../../services/api";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { api, getWebSocketUrl } from "../../services/api";
 
 type User = {
   first_name: string;
   last_name: string;
   email: string;
+  is_admin?: boolean;
 };
 
 type Notification = {
@@ -15,6 +16,7 @@ type Notification = {
 
 const Navbar = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const navigate = useNavigate();
@@ -39,6 +41,23 @@ const Navbar = () => {
     fetchUser();
   }, []);
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser || storedUser === "undefined") {
+      setIsAdmin(false);
+      return;
+    }
+
+    try {
+      const parsedUser = JSON.parse(storedUser);
+      setIsAdmin(parsedUser?.is_admin === true);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
+
+  const getDefaultRoute = () => (isAdmin ? "/admin" : "/dashboard");
+
   // ✅ FETCH NOTIFICATIONS
   const fetchNotifications = async () => {
     try {
@@ -56,9 +75,52 @@ const Navbar = () => {
     fetchNotifications();
   }, []);
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      return;
+    }
+
+    let parsedUser;
+    try {
+      parsedUser = JSON.parse(storedUser);
+    } catch {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!parsedUser?.id || !token) {
+      return;
+    }
+
+    const ws = new WebSocket(
+      getWebSocketUrl(
+        `/ws/notifications/${parsedUser.id}?token=${encodeURIComponent(token)}`
+      )
+    );
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "NEW_INVITE" || data.type === "NEW_NOTIFICATION") {
+          fetchNotifications();
+        }
+      } catch (err) {
+        console.error("WebSocket message parse error", err);
+      }
+    };
+
+    ws.onerror = (event) => {
+      console.warn("WebSocket error", event);
+    };
+
+    return () => ws.close();
+  }, []);
+
   // ✅ LOGOUT
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     localStorage.removeItem("isLoggedIn");
     navigate("/");
   };
@@ -86,7 +148,7 @@ const Navbar = () => {
       {/* ✅ LOGO */}
       <h5
         style={{ cursor: "pointer" }}
-        onClick={() => navigate("/dashboard")}
+        onClick={() => navigate(getDefaultRoute())}
       >
         TaskFlow
       </h5>
@@ -95,19 +157,25 @@ const Navbar = () => {
       <div style={{ display: "flex", gap: "30px" }}>
         {/* Dashboard */}
         <span
-          style={activeStyle("/dashboard")}
-          onClick={() => navigate("/dashboard")}
+          style={activeStyle(getDefaultRoute())}
+          onClick={() => navigate(getDefaultRoute())}
         >
           Dashboard
         </span>
 
+        {isAdmin && (
+          <span
+            style={activeStyle("/admin")}
+            onClick={() => navigate("/admin")}
+          >
+            Admin Panel
+          </span>
+        )}
+
         {/* Boards */}
-        <span
-          style={activeStyle("/boards")}
-          onClick={() => navigate("/boards")}
-        >
+        <Link to="/boards" style={activeStyle("/boards") as any}>
           Boards
-        </span>
+        </Link>
 
         {/* ✅ Inbox with badge */}
         <span

@@ -1,73 +1,38 @@
 import { useState } from "react";
 import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../services/api";
-import axios from "axios";
-
+import { api } from "../../services/api"; // ✅ important
+ 
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+ 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
+ 
   const navigate = useNavigate();
-
-  // ✅ ✅ UPDATED LOGIN AS ADMIN (IMPROVED)
-  const loginAsAdmin = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      // ✅ optional autofill (UX improvement)
-      setEmail("admin@gmail.com");
-      setPassword("1234");
-
-      const res = await api.post("/auth/login", {
-        email: "admin@gmail.com",
-        password: "1234",
-      });
-
-      // ✅ store token + user
-      localStorage.setItem("token", res.data.access_token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      localStorage.setItem("isLoggedIn", "true");
-
-      // ✅ redirect to admin dashboard
-      navigate("/admin");
-
-    } catch (err: any) {
-      setError("Admin login failed");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ EXISTING LOGIN (UNCHANGED ✅)
+ 
+  // ✅ LOGIN HANDLER (REAL API)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
+ 
     setLoading(true);
     setError("");
-
+ 
     try {
       const res = await api.post("/auth/login", {
         email,
         password,
       });
-
-      // ✅ store token and user
-      const user = res.data.user;
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+ 
+      // ✅ store JWT token
       localStorage.setItem("token", res.data.access_token);
-      localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("isLoggedIn", "true");
-
-      if (user?.is_admin) {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
-
+ 
+      // ✅ redirect
+      navigate("/dashboard");
+ 
     } catch (err: any) {
       setError(
         err?.response?.data?.detail || "Invalid email or password"
@@ -76,12 +41,12 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
-
+ 
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
       <Container fluid className="p-0" style={{ height: "100%" }}>
         <Row className="g-0" style={{ height: "100%" }}>
-
+ 
           {/* ✅ LEFT SIDE */}
           <Col
             md={5}
@@ -89,7 +54,7 @@ const AuthPage = () => {
             style={{ backgroundColor: "#ffffff" }}
           >
             <div style={{ width: "100%", maxWidth: "360px" }}>
-
+ 
               {/* ✅ LOGO */}
               <div className="mb-4">
                 <img
@@ -99,16 +64,16 @@ const AuthPage = () => {
                 />
                 <h4 style={{ fontWeight: 600 }}>TaskFlow</h4>
               </div>
-
+ 
               {/* ✅ TITLE */}
               <h5 style={{ fontWeight: 600 }}>Welcome back 👋</h5>
               <p style={{ color: "#6b7280", fontSize: "14px" }}>
                 Log in to continue to your workspace
               </p>
-
-              {/* ✅ ERROR */}
+ 
+              {/* ✅ ERROR MESSAGE */}
               {error && <Alert variant="danger">{error}</Alert>}
-
+ 
               {/* ✅ FORM */}
               <Form onSubmit={handleLogin}>
                 <Form.Group className="mb-3">
@@ -121,7 +86,7 @@ const AuthPage = () => {
                     required
                   />
                 </Form.Group>
-
+ 
                 <Form.Group className="mb-2">
                   <Form.Label>Password</Form.Label>
                   <Form.Control
@@ -132,7 +97,7 @@ const AuthPage = () => {
                     required
                   />
                 </Form.Group>
-
+ 
                 <div className="d-flex justify-content-between mb-3">
                   <Form.Check type="checkbox" label="Remember me" />
                   <span
@@ -145,14 +110,15 @@ const AuthPage = () => {
                     Forgot password?
                   </span>
                 </div>
-
-                {/* ✅ NORMAL LOGIN BUTTON */}
+ 
+                {/* ✅ BUTTON */}
                 <Button
                   type="submit"
                   className="w-100"
                   disabled={loading}
                   style={{
-                    background: "linear-gradient(to right, #4f46e5, #2563eb)",
+                    background:
+                      "linear-gradient(to right, #4f46e5, #2563eb)",
                     border: "none",
                     padding: "10px",
                     fontWeight: 500,
@@ -160,25 +126,9 @@ const AuthPage = () => {
                 >
                   {loading ? "Logging in..." : "Log in"}
                 </Button>
-
-                {/* ✅ ✅ NEW ADMIN BUTTON */}
-                <Button
-                  onClick={loginAsAdmin}
-                  className="w-100 mt-2"
-                  disabled={loading}
-                  style={{
-                    background: "#111827",
-                    border: "none",
-                    padding: "10px",
-                    fontWeight: 500,
-                  }}
-                >
-                  👑 Login as Admin
-                </Button>
-
               </Form>
-
-              {/* ✅ SIGN UP */}
+ 
+              {/* ✅ FOOTER */}
               <div className="text-center mt-4">
                 <span style={{ fontSize: "14px", color: "#6b7280" }}>
                   Don’t have an account?
@@ -195,11 +145,11 @@ const AuthPage = () => {
                   Sign up
                 </span>
               </div>
-
+ 
             </div>
           </Col>
-
-          {/* ✅ RIGHT SIDE */}
+ 
+          {/* ✅ RIGHT SIDE IMAGE */}
           <Col md={7} className="d-none d-md-block">
             <div
               style={{
@@ -214,11 +164,14 @@ const AuthPage = () => {
               }}
             />
           </Col>
-
+ 
         </Row>
       </Container>
     </div>
   );
 };
-
+ 
 export default AuthPage;
+ 
+ 
+

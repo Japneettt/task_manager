@@ -7,6 +7,12 @@ export const api = axios.create({
   },
 });
 
+export const getWebSocketUrl = (path: string) => {
+  const apiUrl = new URL(api.defaults.baseURL || window.location.origin);
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${apiUrl.host}${path}`;
+};
+
 // ✅ REQUEST INTERCEPTOR (attach token)
 api.interceptors.request.use(
   (config) => {
@@ -39,7 +45,7 @@ api.interceptors.response.use(
 //
 
 // ✅ BOARDS
-export const getBoards = () => api.get("/boards");
+export const getBoards = () => api.get("/boards/personal");
 export const getBoard = (id: string) => api.get(`/boards/${id}`);
 export const createBoard = (title: string) =>
   api.post(`/boards`, null, { params: { title } });

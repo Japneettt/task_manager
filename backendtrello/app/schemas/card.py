@@ -9,7 +9,7 @@ class CardCreate(BaseModel):
     description: Optional[str] = None
     position: int = 0
     
-    assigned_to: Optional[str] = None   # ✅ email
+    assigned_to: Optional[UUID] = None   # ✅ email
     priority: Optional[str] = "Medium"
     due_date: Optional[datetime] = None
 

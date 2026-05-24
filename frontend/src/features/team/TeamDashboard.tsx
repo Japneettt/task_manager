@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../services/api";
-import AddList from "../board/AddList";
-import AddCard from "../board/AddCard";
+import AddList from "../../features/board/AddList";
+import AddCard from "../../features/board/AddCard";
  
 import {
   DragDropContext,
@@ -18,29 +18,64 @@ const TeamDashboard = () => {
   const [title, setTitle] = useState("");
   const [openBoard, setOpenBoard] = useState<any>(null);
  
+  // ✅ FETCH DATA
   const fetchData = async () => {
-    const teamRes = await api.get(`/teams/${id}`);
-    setTeam(teamRes.data);
+    try {
+      const teamRes = await api.get(`/teams/${id}`);
+      setTeam(teamRes.data);
  
-    const boardsRes = await api.get(`/boards/teams/${id}/boards`);
-    setBoards(boardsRes.data.boards || boardsRes.data);
+      const boardsRes = await api.get(`/boards/teams/${id}/boards`);
+      setBoards(boardsRes.data);
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
   };
+useEffect(() => {
+  fetchData();
  
-  useEffect(() => {
+  const interval = setInterval(() => {
     fetchData();
-  }, []);
+  }, 5000);
  
+  return () => clearInterval(interval);
+}, []);
+  // ✅ ✅ WEBSOCKET + INITIAL LOAD
+  // useEffect(() => {
+  //   fetchData();
+ 
+  //   const userData = localStorage.getItem("user");
+ 
+  //   if (!userData || userData === "undefined") return;
+ 
+  //   let user;
+  //   try {
+  //     user = JSON.parse(userData);
+  //   } catch {
+  //     return;
+  //   }
+ 
+  //   if (!user?.id) return;
+ 
+  //   const ws = new WebSocket(`ws://localhost:8000/ws/activity/${user.id}`);
+ 
+  //   ws.onmessage = () => {
+  //     fetchData(); // ✅ realtime update
+  //   };
+ 
+  //   return () => ws.close();
+  // }, []);
+ 
+  // ✅ CREATE BOARD
   const createBoard = async () => {
-    if (!title.trim()) return;
+    if (!title) return;
  
-    await api.post("/boards", {
-      title,
-      description: "",
-      team_id: id,
+    await api.post("/boards/", {
+      title: title,
+      team_id: id
     });
  
     setTitle("");
-    await fetchData();
+    fetchData();
   };
  
   return (
@@ -51,7 +86,7 @@ const TeamDashboard = () => {
       {team && (
         <>
           <h4>Members</h4>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {team.members?.map((m: any) => (
               <div
                 key={m.id}
@@ -67,6 +102,7 @@ const TeamDashboard = () => {
           </div>
  
           <h4>Pending Invites</h4>
+          {team.invites?.length === 0 && <p>No pending invites</p>}
           {team.invites?.map((i: any, index: number) => (
             <div key={index}>📩 {i.email}</div>
           ))}
@@ -86,7 +122,7 @@ const TeamDashboard = () => {
  
       {/* ✅ BOARDS */}
       <h4>Boards</h4>
-      <div style={{ display: "flex", gap: "20px" }}>
+      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
         {boards.map((b) => (
           <div
             key={b.id}
@@ -108,7 +144,7 @@ const TeamDashboard = () => {
         ))}
       </div>
  
-      {/* ✅ ✅ ✅ MODAL */}
+      {/* ✅ MODAL */}
       {openBoard && (
         <div
           style={{
@@ -138,7 +174,6 @@ const TeamDashboard = () => {
               <button onClick={() => setOpenBoard(null)}>❌</button>
             </div>
  
-            {/* ✅ DRAG & DROP */}
             <DragDropContext
               onDragEnd={async (result) => {
                 if (!result.destination) return;
@@ -154,15 +189,9 @@ const TeamDashboard = () => {
                 setOpenBoard(res.data);
               }}
             >
- 
               <div style={{ display: "flex", gap: "20px" }}>
- 
                 {openBoard.lists.map((list: any) => (
- 
-                  <Droppable
-                    key={list.id}
-                    droppableId={list.id.toString()}
-                  >
+                  <Droppable key={list.id} droppableId={list.id.toString()}>
                     {(provided) => (
                       <div
                         ref={provided.innerRef}
@@ -176,7 +205,6 @@ const TeamDashboard = () => {
                       >
                         <h4>{list.title}</h4>
  
-                        {/* ✅ CARDS */}
                         {list.cards.map((card: any, index: number) => (
                           <Draggable
                             key={card.id}
@@ -196,9 +224,8 @@ const TeamDashboard = () => {
                                   ...provided.draggableProps.style
                                 }}
                               >
-                                <div><b>{card.title}</b></div>
+                                <b>{card.title}</b>
  
-                                {/* ✅ Show extra data */}
                                 {card.description && (
                                   <div style={{ fontSize: "12px" }}>
                                     {card.description}
@@ -217,7 +244,6 @@ const TeamDashboard = () => {
  
                         {provided.placeholder}
  
-                        {/* ✅ ADD CARD */}
                         <AddCard
                           listId={list.id}
                           boardId={openBoard.id}
@@ -227,15 +253,12 @@ const TeamDashboard = () => {
                       </div>
                     )}
                   </Droppable>
- 
                 ))}
  
-                {/* ✅ ADD LIST */}
                 <AddList
                   boardId={openBoard.id}
                   refreshBoard={setOpenBoard}
                 />
- 
               </div>
             </DragDropContext>
           </div>

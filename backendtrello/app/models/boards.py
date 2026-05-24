@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Boolean, Column, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy import DateTime
@@ -34,6 +34,8 @@ class Board(Base):
     description = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id"), nullable=True)
+    archived = Column(Boolean, default=False)
+ 
     
  
  

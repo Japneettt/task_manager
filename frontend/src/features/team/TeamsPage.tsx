@@ -1,24 +1,31 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
- 
+
 const TeamsPage = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const navigate = useNavigate();
- 
+
   const fetchTeams = async () => {
     const res = await api.get("/teams");
     setTeams(res.data);
   };
- 
+
   useEffect(() => {
     fetchTeams();
+
+    const interval = setInterval(() => {
+      fetchTeams();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
- 
+
+
   return (
     <div style={{ padding: "20px" }}>
       <h2>My Team Projects 👥</h2>
- 
+
       {/* ✅ CREATE TEAM */}
       <button
         onClick={() => navigate("/teams/create")}
@@ -33,7 +40,7 @@ const TeamsPage = () => {
       >
         + Create New Team
       </button>
- 
+
       {/* ✅ LIST TEAMS */}
       <div style={{ display: "flex", gap: "20px" }}>
         {teams.map((team) => (
@@ -57,6 +64,5 @@ const TeamsPage = () => {
     </div>
   );
 };
- 
+
 export default TeamsPage;
- 

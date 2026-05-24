@@ -6,6 +6,7 @@ import {
   acceptTeamInvite,
   rejectTeamInvite,
   api,
+  getWebSocketUrl,
 } from "../../services/api";
 
 type Notification = {
@@ -70,6 +71,52 @@ const InboxPage = () => {
 
     return () => clearInterval(interval);
   }, [category]);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      return;
+    }
+
+    let parsedUser;
+    try {
+      parsedUser = JSON.parse(storedUser);
+    } catch {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!parsedUser?.id || !token) {
+      return;
+    }
+
+    const ws = new WebSocket(
+      getWebSocketUrl(
+        `/ws/notifications/${parsedUser.id}?token=${encodeURIComponent(token)}`
+      )
+    );
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "NEW_INVITE" || data.type === "NEW_NOTIFICATION") {
+          fetchNotifications();
+          fetchInvites();
+        }
+      } catch (err) {
+        console.error("WebSocket message parse error", err);
+      }
+    };
+
+    ws.onerror = (event) => {
+      console.warn("WebSocket error", event);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   // ✅ MARK READ
   const markAsRead = async (id: string) => {

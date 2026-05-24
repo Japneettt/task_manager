@@ -19,8 +19,7 @@ class TeamRead(BaseModel):
  
  
 class InviteRequest(BaseModel):
-    email: Optional[str] = None
-    emails: Optional[List[str]] = None
+    emails: List[str]
 
     class Config:
         extra = "forbid"

@@ -1,3 +1,4 @@
+ 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -40,16 +41,59 @@ def create_list(
     else:
         raise HTTPException(status_code=400, detail="Title is required")
  
+    # Normalize incoming title to canonical set
+    def normalize_title(t: str) -> str:
+        if not t:
+            return t
+        s = t.strip().lower()
+        if s in ("pending", "todo", "to do"):
+            return "To Do"
+        if s in ("progress", "in progress", "doing", "inprogress"):
+            return "In Progress"
+        if s in ("completed", "done"):
+            return "Done"
+        return t.strip()
+
+    canonical_title = normalize_title(list_title)
+
+    # Gather existing lists for this board and deduplicate by canonical title
+    existing_lists = db.query(List).filter(List.board_id == board_id).all()
+    matched = [L for L in existing_lists if normalize_title(L.title).lower() == canonical_title.lower()]
+
+    if matched:
+        # If duplicates exist, merge cards into the first and remove extras
+        primary = matched[0]
+        duplicates = matched[1:]
+        if duplicates:
+            # Move cards from duplicates to primary
+            from app.models.card import Card
+
+            for dup in duplicates:
+                cards = db.query(Card).filter(Card.list_id == dup.id).all()
+                for c in cards:
+                    c.list_id = primary.id
+                    db.add(c)
+                db.delete(dup)
+
+        # update title/position of primary if needed
+        primary.title = canonical_title
+        primary.position = position or primary.position
+        db.add(primary)
+        db.commit()
+        db.refresh(primary)
+        return primary
+
+    # Create new canonical list
     lst = List(
         board_id=board_id,
-        title=list_title,
+        title=canonical_title,
         position=position,
     )
- 
+
     db.add(lst)
     db.commit()
     db.refresh(lst)
- 
+
     return lst
 # @router.post("/boards/{board_id}/lists", response_model=ListRead)
 # @router.post("/{board_id}/lists", response_model=ListRead)
@@ -139,3 +183,5 @@ def delete_list(
     db.commit()
  
     return {"message": "List deleted successfully"}
+ 
+ 
