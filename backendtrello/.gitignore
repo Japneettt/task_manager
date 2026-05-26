@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 .env
 *.log
+trelloclone-5bcc6-firebase-adminsdk-fbsvc-a3506677e7.json
+*.json

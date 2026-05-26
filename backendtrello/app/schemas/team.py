@@ -1,24 +1,3 @@
-# from pydantic import BaseModel
-# from uuid import UUID
-# from typing import List
-
-# class TeamCreate(BaseModel):
-#     name: str
-#     type: str
-#     description: str
-
-# class TeamRead(BaseModel):
-#     id: UUID
-#     name: str
-#     type: str
-#     description: str
-
-#     class Config:
-#         from_attributes = True
-
-
-# class InviteRequest(BaseModel):
-#     emails: List[str]
 from pydantic import BaseModel
 from uuid import UUID
 from typing import List, Optional

@@ -8,6 +8,7 @@ const AddCard = ({ listId, boardId, refreshBoard, members }: any) => {
   const [desc, setDesc] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState("low");
 
   const createCard = async () => {
     if (!title.trim()) return;
@@ -16,13 +17,15 @@ const AddCard = ({ listId, boardId, refreshBoard, members }: any) => {
       title: title,
       description: desc,
       assigned_to: assignedTo || null,
-      due_date: dueDate ? new Date(dueDate).toISOString() : null
+      due_date: dueDate ? new Date(dueDate).toISOString() : null,
+      priority,
     });
 
     setTitle("");
     setDesc("");
     setAssignedTo("");
     setDueDate("");
+    setPriority("low");
     setOpen(false);
 
     const res = await api.get(`/boards/${boardId}`);
@@ -74,6 +77,16 @@ const AddCard = ({ listId, boardId, refreshBoard, members }: any) => {
               marginBottom: "6px"
             }}
           />
+
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            style={{ width: "100%", marginBottom: "6px" }}
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
 
           {/* ✅ assign user */}
           <select

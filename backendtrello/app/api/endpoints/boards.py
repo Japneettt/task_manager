@@ -15,6 +15,21 @@ from app.models.card import Card
 router = APIRouter(prefix="/boards", tags=["Boards"])
 from app.schemas.board import BoardCreate, BoardRead
 
+#added 24
+def serialize_board(board: Board, owner: User):
+    return {
+        "id": str(board.id),
+        "title": board.title,
+        "description": board.description,
+        "created_at": board.created_at,
+        "owner_id": str(owner.id),
+        "owner_name": f"{owner.first_name} {owner.last_name}",
+        "owner_email": owner.email,
+        "team_id": str(board.team_id) if board.team_id else None,
+        "archived": board.archived,
+    }
+    
+    
 @router.post("/",response_model=BoardRead)
 def create_board(
     data: BoardCreate,
@@ -70,13 +85,22 @@ def get_personal_boards(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    boards = db.query(Board).filter(
+    # boards = db.query(Board).filter(
+    #     Board.owner_id == current_user.id,
+    #     Board.team_id == None,
+    #     Board.archived == False
+    # ).all()
+    
+    rows = db.query(Board, User).join(User, Board.owner_id == User.id).filter(
         Board.owner_id == current_user.id,
         Board.team_id == None,
         Board.archived == False
     ).all()
 
-    return boards
+
+    # return boards
+    #added 24
+    return [serialize_board(board, owner) for board, owner in rows]
 
 @router.get("/teams/{team_id}/boards")
 def get_team_boards(
@@ -94,12 +118,18 @@ def get_team_boards(
     if not member:
         raise HTTPException(status_code=403, detail="Not allowed")
 
-    boards = db.query(Board).filter(
+    # boards = db.query(Board).filter(
+    #     Board.team_id == team_id
+    # ).all()
+
+    # return boards
+    #added 24
+    rows = db.query(Board, User).join(User, Board.owner_id == User.id).filter(
         Board.team_id == team_id
     ).all()
-
-    return boards
-
+ 
+    return [serialize_board(board, owner) for board, owner in rows]
+ 
 
 @router.delete("/{board_id}")
 def delete_board(
@@ -161,12 +191,20 @@ def get_archived_boards(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    boards = db.query(Board).filter(
+    # boards = db.query(Board).filter(
+    #     Board.owner_id == current_user.id,
+    #     Board.archived == True
+    # ).all()
+
+    # return boards
+    #added 24
+    rows = db.query(Board, User).join(User, Board.owner_id == User.id).filter(
         Board.owner_id == current_user.id,
         Board.archived == True
     ).all()
-
-    return boards
+ 
+    return [serialize_board(board, owner) for board, owner in rows]
+ 
 
 @router.get("/{board_id}")
 def get_board(

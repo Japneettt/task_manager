@@ -13,6 +13,7 @@ from app.models.team import Team
 from app.models.team_member import TeamMember
 from app.models.team_invite import TeamInvite
 from app.models.user import User
+from app.models.boards import Board
 
 from app.schemas.team import TeamCreate, TeamRead, InviteRequest
 from app.services.notification_service import create_notification
@@ -351,6 +352,7 @@ def delete_team(
         raise HTTPException(status_code=403, detail="Not allowed")
 
     # ✅ DELETE DEPENDENCIES FIRST
+    #db.query(Board).filter(Board.team_id == team_id).delete()
     db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
     db.query(TeamInvite).filter(TeamInvite.team_id == team_id).delete()
 

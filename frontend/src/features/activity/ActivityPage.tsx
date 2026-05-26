@@ -26,7 +26,7 @@ const ActivityPage = () => {
         try {
             // const workloadRes = await getWorkload();
             const workloadRes = showArchivedTeamBoards
-                ? await api.get("/teamss/archived")
+                ? await api.get("/teams/archived")
                 : await getWorkload();
 
             const statsRes = await getProductivity();
@@ -336,7 +336,15 @@ const ActivityPage = () => {
                                             // const boardId = team.board_id;
                                             // if (!boardId) return;
 
-                                            await api.delete(`/teams/${team.team_id}`);
+                                            // await api.delete(`/teams/${team.team_id}`);
+                                            try {
+                                                await api.delete(`/teams/${team.team_id}`);
+                                                console.log("✅ Deleted");
+
+                                                setWorkload(prev => prev.filter(t => t.team_id !== team.team_id)); // ✅ instant UI update
+                                            } catch (err) {
+                                                console.error("❌ Delete failed:", err);
+                                            }
                                             fetchData();
                                         }}
                                         style={{
@@ -362,7 +370,7 @@ const ActivityPage = () => {
 
                                             await api.patch(`/teams/${team.team_id}/archive`);
                                             // await api.patch(`/boards/${team.boards[0].id}/archive`)
-                                            // fetchData();
+                                            fetchData();
                                         }}
                                         style={{
                                             cursor: "pointer",

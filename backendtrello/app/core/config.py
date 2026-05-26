@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7 
 
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    
+    ADMIN_EMAIL: str
+    ADMIN_PASSWORD: str
 
     class Config:
         env_file = ".env"
