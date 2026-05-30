@@ -81,6 +81,24 @@ useEffect(() => {
   return (
     <div style={{ padding: "20px" }}>
       <h2 style={{ color: "#4f46e5" }}>{team?.name}</h2>
+
+      {/* ✅ TEAM IMAGE */}
+<div
+  style={{
+    width: "100%",
+    height: "180px",
+    borderRadius: "12px",
+    marginTop: "15px",
+    marginBottom: "20px",
+    backgroundImage: `url(${
+      team?.image_url ||
+      "https://source.unsplash.com/800x600/?abstract,team"
+    })`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  }}
+/>
+
  
       {/* ✅ MEMBERS */}
       {team && (
@@ -254,6 +272,8 @@ useEffect(() => {
                     )}
                   </Droppable>
                 ))}
+
+                
  
                 <AddList
                   boardId={openBoard.id}

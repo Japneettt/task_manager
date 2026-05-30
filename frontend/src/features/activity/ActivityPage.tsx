@@ -25,7 +25,7 @@ const ActivityPage = () => {
         try {
             // const workloadRes = await getWorkload();
             const workloadRes = showArchivedTeamBoards
-                ? await api.get("/teamss/archived")
+                ? await api.get("/teams/archived")
                 : await getWorkload();
  
             const statsRes = await getProductivity();
@@ -328,7 +328,7 @@ const ActivityPage = () => {
                                     <span
                                         onClick={async (e) => {
                                             e.stopPropagation();
-                                            if (!confirm("Delete this board?")) return;
+                                                if (!confirm("Delete this team?")) return;
  
                                             // await api.delete(`/boards/${team.id}`);
  
@@ -339,12 +339,13 @@ const ActivityPage = () => {
                                             try {
                                                 await api.delete(`/teams/${team.team_id}`);
                                                 console.log("✅ Deleted");
- 
-                                                setWorkload(prev => prev.filter(t => t.team_id !== team.team_id)); // ✅ instant UI update
-                                            } catch (err) {
+
+                                                // refresh list
+                                                await fetchData();
+                                            } catch (err: any) {
                                                 console.error("❌ Delete failed:", err);
+                                                alert(err?.response?.data?.detail || "Failed to delete team");
                                             }
-                                            fetchData();
                                         }}
                                         style={{
                                             cursor: "pointer",
@@ -367,9 +368,18 @@ const ActivityPage = () => {
                                             // await api.patch(`/boards/${boardId}/archive`);
                                             // fetchData();
  
-                                            await api.patch(`/teams/${team.team_id}/archive`);
-                                            // await api.patch(`/boards/${team.boards[0].id}/archive`)
-                                            // fetchData();
+                                            try {
+                                                if (showArchivedTeamBoards) {
+                                                    // unarchive when viewing archived list
+                                                    await api.patch(`/teams/${team.team_id}/unarchive`);
+                                                } else {
+                                                    await api.patch(`/teams/${team.team_id}/archive`);
+                                                }
+                                                await fetchData();
+                                            } catch (err: any) {
+                                                console.error("❌ Archive toggle failed:", err);
+                                                alert(err?.response?.data?.detail || "Failed to archive/unarchive team");
+                                            }
                                         }}
                                         style={{
                                             cursor: "pointer",
@@ -446,6 +456,7 @@ const ActivityPage = () => {
                                         color: "#6b7280"
                                     }}>
                                         • Aug 16 2025
+                                        <div style={{ fontSize: 12, color: '#374151', marginTop: 6 }}>Owner: {team.owner_name || 'Unknown'} • {team.owner_role || 'member'}</div>
                                     </div>
  
                                     {/* ✅ PROGRESS */}

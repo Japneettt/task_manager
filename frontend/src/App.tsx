@@ -16,11 +16,19 @@ import CreateTeam from "./features/team/CreateTeam";
 import InviteMembers from "./features/team/InviteMembers";
 import TeamDashboard from "./features/team/TeamDashboard";
 import HomePage from "./features/HomePage";
+import AdminLayout from "./features/admin/AdminLayout";
+import AdminDashboard from "./features/admin/AdminDashboard";
+import TeamManagement from "./features/admin/TeamManagement";
+import UserInsights from "./features/admin/UserInsights";
 /**
  * ✅ TEMP AUTH CHECK
  */
 const isAuthenticated = (): boolean => {
   return localStorage.getItem("isLoggedIn") === "true";
+};
+
+const isAdmin = () => {
+  return localStorage.getItem("isAdmin") === "true";
 };
  
 /**
@@ -43,6 +51,13 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
  
+const AdminRoute = ({ children }: { children: JSX.Element }) => {
+  if (!isAdmin()) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+ 
 function App() {
   return (
     <BrowserRouter>
@@ -58,6 +73,8 @@ function App() {
         />
  
         {/* ✅ AUTH */}
+
+        
         {/* ✅ DASHBOARD */}
         <Route
           path="/dashboard"
@@ -131,6 +148,19 @@ function App() {
  
  
         <Route path="/teams/create" element={<CreateTeam />} /><Route path="/teams/:id/invite" element={<InviteMembers />} /><Route path="/teams/:id" element={<TeamDashboard />} />
+
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="teams" element={<TeamManagement />} />
+          <Route path="users" element={<UserInsights />} />
+        </Route>
  
         {/* ✅ FALLBACK */}
         <Route path="*" element={<Navigate to="/" replace />} />

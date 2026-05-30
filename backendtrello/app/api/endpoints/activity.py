@@ -98,13 +98,27 @@ def get_workload(
        
         boards = db.query(Board).filter(Board.team_id == team_id).all()
  
+        # owner info
+        owner = None
+        owner_name = None
+        owner_role = None
+        if team and team.owner_id:
+            o = db.query(User).filter(User.id == team.owner_id).first()
+            owner = str(team.owner_id)
+            if o:
+                owner_name = f"{o.first_name} {o.last_name}"
+                owner_role = o.role
+
         result.append({
-    "team_id": str(team_id),
-    "team_name": team.name if team else "Team",
-    "members": member_data,
-    "board_id": str(boards[0].id) if boards and len(boards) > 0 else None
-    # "board_id": str(boards[0].id) if boards else None   # ✅ ADD THIS
-})
+            "team_id": str(team_id),
+            "team_name": team.name if team else "Team",
+            "members": member_data,
+            "board_id": str(boards[0].id) if boards and len(boards) > 0 else None,
+            "owner_id": owner,
+            "owner_name": owner_name,
+            "owner_role": owner_role,
+            "archived": bool(team.archived) if team else False
+        })
  
        
  

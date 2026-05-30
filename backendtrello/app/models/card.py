@@ -27,7 +27,10 @@ class Card(Base):
     # ✅ FIXED
     assigned_to = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
-    priority = Column(String, default="Medium") 
+    priority = Column(String, default="Medium")
+    
+    # ✅ NEW: Badge for custom status (e.g., Not Started, On Track, At Risk)
+    badge = Column(String, nullable=True)
 
     # ✅ VERY IMPORTANT (used in planner)
     due_date = Column(DateTime, nullable=True)

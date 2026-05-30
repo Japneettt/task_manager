@@ -7,17 +7,16 @@ import { PieChart, Pie, Cell } from "recharts";
 
 type User = { first_name: string; last_name: string; email?: string };
 type PlannerResponse = { assigned?: any[]; today?: any[]; overdue?: any[]; kanban?: any };
-type Board = { id: string | number; title?: string; name?: string; description?: string };
 type Team = { id: string; name: string; description?: string; type?: string };
 
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [plannerData, setPlannerData] = useState<PlannerResponse | null>(null);
   const [dashboardCounts, setDashboardCounts] = useState<any | null>(null);
-  const [boards, setBoards] = useState<Board[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamName, setTeamName] = useState("");
   const [teamDesc, setTeamDesc] = useState("");
+  const [teamImage, setTeamImage] = useState<File | null>(null);
   const [inviteEmails, setInviteEmails] = useState("");
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [search, setSearch] = useState("");
@@ -30,10 +29,9 @@ export default function Dashboard() {
     const loadDashboard = async () => {
       setLoading(true);
       try {
-        const [userRes, plannerRes, boardsRes, teamsRes] = await Promise.all([
+        const [userRes, plannerRes, teamsRes] = await Promise.all([
           api.get("/users/me"),
           api.get("/planner"),
-          api.get("/boards/personal"),
           api.get("/teams"),
         ]);
 
@@ -46,7 +44,6 @@ export default function Dashboard() {
         } catch (e) {
           // ignore, planner will be fallback
         }
-        setBoards(boardsRes.data || []);
         setTeams(teamsRes.data || []);
       } catch (err) {
         console.error("Dashboard load failed", err);
@@ -114,7 +111,6 @@ export default function Dashboard() {
 
   const recentTeams = useMemo(() => teams.slice(-3).reverse(), [teams]);
 
-  const todayCount = plannerData?.today?.length || 0;
   const completedCount = dashboardCounts?.done ?? plannerData?.kanban?.done?.length ?? 0;
   const inProgressCount = dashboardCounts?.in_progress ?? plannerData?.kanban?.in_progress?.length ?? 0;
   const todoCount = dashboardCounts?.todo ?? plannerData?.kanban?.to_do?.length ?? 0;
@@ -147,11 +143,21 @@ export default function Dashboard() {
     }
 
     try {
-      const createRes = await api.post("/teams", {
-        name: teamName,
-        description: teamDesc,
-        type: "private",
-      });
+      let createRes;
+      if (teamImage) {
+        const formData = new FormData();
+        formData.append("name", teamName);
+        formData.append("description", teamDesc);
+        formData.append("type", "private");
+        formData.append("image", teamImage);
+        createRes = await api.post("/teams", formData);
+      } else {
+        createRes = await api.post("/teams", {
+          name: teamName,
+          description: teamDesc,
+          type: "private",
+        });
+      }
 
       const createdTeamId = createRes.data?.id;
       if (createdTeamId && inviteEmails.trim()) {
@@ -166,6 +172,7 @@ export default function Dashboard() {
       setTeams(teamsRes.data || []);
       setTeamName("");
       setTeamDesc("");
+      setTeamImage(null);
       setInviteEmails("");
     } catch (err: any) {
       console.error("Team creation failed", err);
@@ -301,6 +308,18 @@ export default function Dashboard() {
                 placeholder="Invite members (comma separated)"
                 style={inputStyle}
               />
+              <label style={{ display: "block", margin: "12px 0", fontSize: "14px", color: "#334155" }}>
+                Team image (optional)
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "block", marginTop: "8px" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    setTeamImage(file);
+                  }}
+                />
+              </label>
               <button onClick={createTeam} style={buttonPrimary}>
                 Create team
               </button>

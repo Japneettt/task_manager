@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime
+from app.core.firebase import verify_firebase_token
 
- 
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.auth import RegisterRequest, LoginRequest, VerifySchema
@@ -129,4 +129,67 @@ def resend_otp(email: str, db: Session = Depends(get_db)):
     send_otp(email, otp_code)
  
     return {"message": "OTP resent ✅"}
+
+
+@router.post("/google")
+def google_login(data: dict, db: Session = Depends(get_db)):
+    token = data.get("token")
  
+    decoded = verify_firebase_token(token)
+ 
+    if not decoded:
+        raise HTTPException(401, "Invalid Google token")
+ 
+    email = decoded.get("email")
+    name = decoded.get("name", "")
+ 
+    first_name = name.split(" ")[0] if name else "User"
+    last_name = " ".join(name.split(" ")[1:]) if len(name.split(" ")) > 1 else "User"
+ 
+    user = db.query(User).filter(User.email == email).first()
+ 
+    # ✅ CREATE USER IF NOT EXISTS
+    if not user:
+        user = User(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            hashed_password="google_auth"  # dummy
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+ 
+    return {
+        "access_token": create_access_token({"sub": str(user.id)}),
+        "refresh_token": create_refresh_token({"sub": str(user.id)}),
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+        }
+    }
+ 
+@router.post("/admin/login")
+def admin_login(data: LoginRequest, db: Session = Depends(get_db)):
+ 
+    user = db.query(User).filter(User.email == data.email).first()
+ 
+    if not user:
+        raise HTTPException(401, "Invalid email")
+ 
+    if not verify_password(data.password, user.hashed_password):
+        raise HTTPException(401, "Invalid password")
+ 
+    if not user.is_admin:
+        raise HTTPException(403, "Admin only")
+ 
+    return {
+        "access_token": create_access_token({"sub": str(user.id)}),
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "is_admin": True
+        }
+    }

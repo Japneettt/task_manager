@@ -242,6 +242,10 @@ def get_board(
                 {
                     "id": str(c.id),
                     "title": c.title,
+                    "description": c.description,
+                    "due_date": c.due_date.isoformat() if c.due_date else None,
+                    "badge": c.badge,
+                    "priority": c.priority,
                     "assigned_to": str(c.assigned_to) if c.assigned_to else None
                 }
                 for c in cards

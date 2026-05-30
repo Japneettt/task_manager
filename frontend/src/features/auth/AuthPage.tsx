@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api"; // ✅ important
- 
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../../services/firebase";
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11,6 +12,7 @@ const AuthPage = () => {
   const [error, setError] = useState("");
  
   const navigate = useNavigate();
+ 
  
   // ✅ LOGIN HANDLER (REAL API)
   const handleLogin = async (e: React.FormEvent) => {
@@ -39,6 +41,25 @@ const AuthPage = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+ 
+      const token = await result.user.getIdToken();
+ 
+      const res = await api.post("/auth/google", {
+        token,
+      });
+ 
+      localStorage.setItem("token", res.data.access_token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("isLoggedIn", "true");
+ 
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Google login failed", err);
     }
   };
  
@@ -128,6 +149,50 @@ const AuthPage = () => {
                 </Button>
               </Form>
  
+ 
+              {/* ✅ GOOGLE LOGIN BUTTON */}
+              <Button
+                onClick={handleGoogleLogin}
+                style={{
+                  marginTop: "10px",
+                  background: "#ffffff",
+                  color: "#000",
+                  border: "1px solid #ccc",
+                  width: "100%",
+                }}
+              >
+                Continue with Google
+              </Button>
+ 
+ 
+              <Button
+  onClick={async () => {
+    try {
+      const res = await api.post("/auth/admin/login", {
+        email,
+        password,
+      });
+ 
+      localStorage.setItem("token", res.data.access_token);
+      localStorage.setItem("isAdmin", "true");
+ 
+      navigate("/admin");
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Admin login failed");
+    }
+  }}
+  style={{
+    marginTop: "10px",
+    width: "100%",
+    background: "black",
+    color: "#00f0ff",
+    border: "1px solid #00f0ff",
+  }}
+>
+  🔐 Login as Admin
+</Button>
+ 
+ 
               {/* ✅ FOOTER */}
               <div className="text-center mt-4">
                 <span style={{ fontSize: "14px", color: "#6b7280" }}>
@@ -174,4 +239,3 @@ const AuthPage = () => {
 export default AuthPage;
  
  
-

@@ -77,12 +77,16 @@ def create_card(
         card_position = data.position
         card_assigned = data.assigned_to
         card_due_date = data.due_date
+        card_priority = data.priority
+        card_badge = data.badge  # ✅ NEW: Get badge from data
     elif title:
         card_title = title
         card_desc = description
         card_position = 0
         card_assigned = assigned_to
-        card_due_date =due_date
+        card_due_date = due_date
+        card_priority = "Medium"
+        card_badge = None
     else:
         raise HTTPException(status_code=400, detail="Title required")
  
@@ -118,7 +122,9 @@ def create_card(
         list_id=list_id,
         board_id=lst.board_id,
         assigned_to=card_assigned,
-        due_date=str(card_due_date) if card_due_date else None   # ✅ FIXED
+        due_date=str(card_due_date) if card_due_date else None,   # ✅ FIXED
+        priority=card_priority,
+        badge=card_badge  # ✅ NEW: Add badge
     )
     print("FINAL DATA →", {
     "title": card_title,
@@ -180,6 +186,18 @@ def update_card(card_id: UUID, data: CardCreate, db: Session = Depends(get_db)):
     card.title = data.title
     card.description = data.description
     card.position = data.position
+    card.priority = data.priority
+    card.badge = data.badge  # ✅ NEW: Update badge
+    card.due_date = data.due_date
+    
+    # Handle assigned_to if provided
+    if data.assigned_to:
+        if isinstance(data.assigned_to, str):
+            user = db.query(User).filter(User.email == data.assigned_to).first()
+            if user:
+                card.assigned_to = user.id
+        else:
+            card.assigned_to = data.assigned_to
  
     db.commit()
     db.refresh(card)

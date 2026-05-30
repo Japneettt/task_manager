@@ -2,9 +2,6 @@ import axios from "axios";
 
 export const api = axios.create({
   baseURL: "http://localhost:8000", // ✅ backend URL
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 export const getWebSocketUrl = (path: string) => {
@@ -20,6 +17,12 @@ api.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    if (config.data && !(config.data instanceof FormData)) {
+      config.headers["Content-Type"] = "application/json";
+    } else if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
     }
 
     return config;
