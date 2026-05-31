@@ -23,3 +23,4 @@ class User(Base):
     last_login = Column(DateTime(timezone=True), nullable=True)
     
     is_admin = Column(Boolean, default=False) 
+    avatar = Column(String, nullable=True)

@@ -32,3 +32,4 @@ class Card(Base):
     depends_on = Column(UUID(as_uuid=True), nullable=True)
     completed_at = Column(DateTime, nullable=True)
     priority = Column(String, default="Medium") 
+    badge = Column(String, nullable=True)

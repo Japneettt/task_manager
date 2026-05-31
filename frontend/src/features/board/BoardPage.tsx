@@ -1,218 +1,10 @@
-// import { useEffect, useState } from "react";
-// import { api } from "../../services/api";
-// import Navbar from "../../components/layout/Navbar";
-// import { useParams } from "react-router-dom";
-
-// import {
-//   DragDropContext,
-//   Droppable,
-//   Draggable,
-// } from "@hello-pangea/dnd";
-
-// type Card = {
-//   id: string;
-//   title: string;
-// };
-
-// type List = {
-//   id: string;
-//   title: string;
-//   position: number;
-//   cards: Card[];
-// };
-
-// type Board = {
-//   id: string;
-//   title: string;
-//   lists: List[];
-// };
-
-// const BoardPage = () => {
-//   const [board, setBoard] = useState<Board | null>(null);
-//   const { id } = useParams();
-
-//   const fetchBoard = async () => {
-//     try {
-//       const res = await api.get(`/boards/${id}`);
-//       const data = res.data;
-
-//       setBoard({
-//         id: data.id,
-//         title: data.title,
-//         lists: data.lists.map((l: any) => ({
-//           id: String(l.id), // ✅ IMPORTANT
-//           title: l.title,
-//           position: l.position,
-//           cards: l.cards.map((c: any) => ({
-//             id: String(c.id), // ✅ IMPORTANT
-//             title: c.title,
-//           })),
-//         })),
-//       });
-//     } catch (err) {
-//       console.error("Error fetching board", err);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchBoard();
-//   }, [id]);
-
-//   // ✅ DRAG HANDLER
-//   const handleDragEnd = async (result: any) => {
-//     console.log("DRAG RESULT:", result); // ✅ debug
-
-//     if (!result.destination) return;
-
-//     const taskId = result.draggableId;
-//     const newListId = result.destination.droppableId;
-
-//     try {
-//       // await api.patch(`/tasks/${taskId}/move`, null, {
-//       //   params: { list_id: newListId },
-//       // });
-
-//       await api.patch(`/cards/${taskId}/move`, null, {
-//         params: {
-//           list_id: newListId,
-//           position: result.destination.index
-//         }
-//       })
-
-
-//       fetchBoard(); // ✅ refresh
-//     } catch (err) {
-//       console.error("Move failed", err);
-//     }
-//   };
-
-//   if (!board) return <div>Loading...</div>;
-
-//   return (
-//     <div style={{ background: "#f6f8fb", minHeight: "100vh" }}>
-//       <Navbar />
-
-//       <div style={{ padding: "20px" }}>
-
-//         <h3>{board.title}</h3>
-
-//         {/* ✅ ADD LIST INPUT HERE */}
-//         <input
-//           placeholder="+ Add list"
-//           style={{
-//             marginBottom: "20px",
-//             padding: "10px",
-//             borderRadius: "8px",
-//             border: "1px solid #ccc",
-//           }}
-//           onKeyDown={async (e) => {
-//             if (e.key === "Enter") {
-//               const input = e.target as HTMLInputElement;
-
-//               if (!input.value) return;
-
-//               await api.post(`/boards/${board.id}/lists`, {
-//                 title: input.value,
-//                 position: board.lists.length,
-//               });
-
-
-//               input.value = "";
-//               fetchBoard();
-//             }
-//           }}
-//         />
-
-//         <DragDropContext onDragEnd={handleDragEnd}>
-//           <div style={{ display: "flex", gap: "20px" }}>
-
-//             {board.lists.map((list) => (
-//               <Droppable droppableId={String(list.id)} key={list.id}>
-//                 {(provided) => (
-//                   <div
-//                     ref={provided.innerRef}
-//                     {...provided.droppableProps}
-//                     style={{
-//                       flex: 1,
-//                       background: "#e5e7eb",
-//                       padding: "10px",
-//                       borderRadius: "10px",
-//                       minHeight: "400px",
-//                     }}
-//                   >
-//                     <h4>{list.title}</h4>
-
-//                     {list.cards.map((card, index) => (
-//                       <Draggable
-//                         key={card.id}
-//                         draggableId={String(card.id)} // ✅ MUST BE STRING
-//                         index={index} // ✅ REQUIRED
-//                       >
-//                         {(provided) => (
-//                           <div
-//                             ref={provided.innerRef}
-//                             {...provided.draggableProps}
-//                             {...provided.dragHandleProps} // ✅ REQUIRED
-//                             style={{
-//                               background: "#fff",
-//                               padding: "10px",
-//                               marginBottom: "10px",
-//                               borderRadius: "8px",
-//                               userSelect: "none",
-//                               ...provided.draggableProps.style,
-//                             }}
-//                           >
-//                             {card.title}
-//                           </div>
-//                         )}
-//                       </Draggable>
-//                     ))}
-
-//                     {provided.placeholder}
-
-//                     {/* ✅ ADD TASK */}
-//                     <input
-//                       placeholder="+ Add card"
-//                       style={{ marginTop: "10px", width: "100%" }}
-//                       onKeyDown={async (e) => {
-//                         if (e.key === "Enter") {
-//                           const input = e.target as HTMLInputElement;
-
-//                           // await api.post("/tasks", null, {
-//                           //   params: {
-//                           //     title: input.value,
-//                           //     list_id: list.id,
-//                           //   },
-//                           // });
-//                           await api.post(`/lists/${list.id}/cards`, {
-//                             title: input.value,
-//                             position: list.cards.length,
-//                           });
-
-//                           input.value = "";
-//                           fetchBoard();
-//                         }
-//                       }}
-//                     />
-//                   </div>
-//                 )}
-//               </Droppable>
-//             ))}
-//           </div>
-//         </DragDropContext>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default BoardPage;
-
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import Navbar from "../../components/layout/Navbar";
 import { useParams } from "react-router-dom";
 import { Modal, Button, Form } from "react-bootstrap";
-
+import TaskCard from "./TaskCard";
+import EditCardModal from "./EditCardModal";
 import {
   DragDropContext,
   Droppable,
@@ -225,6 +17,8 @@ type Card = {
   description?: string;
   due_date?: string;
   priority?: string;
+  badge?: string | null;
+  assigned_to?: string | null;
 };
 
 type List = {
@@ -255,10 +49,14 @@ const BoardPage = () => {
   const [board, setBoard] = useState<Board | null>(null);
   const [showCardDialog, setShowCardDialog] = useState(false);
   const [showListDialog, setShowListDialog] = useState(false);
+  const [showEditCardDialog, setShowEditCardDialog] = useState(false);
+  const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [cardForm, setCardForm] = useState({
     title: "",
     description: "",
+    badge: "",
     due_date: "",
+    priority: "Medium",
   });
   const [newListTitle, setNewListTitle] = useState("");
   const [selectedListId, setSelectedListId] = useState<string>("");
@@ -279,6 +77,8 @@ const BoardPage = () => {
           description: c.description || "",
           due_date: c.due_date || "",
           priority: c.priority || "low",
+          badge: c.badge ?? null,
+          assigned_to: c.assigned_to ?? null,
         })),
       }));
 
@@ -304,6 +104,8 @@ const BoardPage = () => {
               description: c.description || "",
               due_date: c.due_date || "",
               priority: c.priority || "low",
+              badge: c.badge ?? null,
+              assigned_to: c.assigned_to ?? null,
             })),
           };
         } else {
@@ -314,6 +116,8 @@ const BoardPage = () => {
             description: c.description || "",
             due_date: c.due_date || "",
             priority: c.priority || "low",
+            badge: c.badge ?? null,
+            assigned_to: c.assigned_to ?? null,
           })));
         }
       }
@@ -391,7 +195,7 @@ const BoardPage = () => {
           board?.lists.find((l) => l.id === selectedListId)?.cards.length || 0,
       });
 
-      setCardForm({ title: "", description: "", due_date: "" });
+      setCardForm({ title: "", description: "", badge: "", due_date: "", priority: "Medium" });
       setShowCardDialog(false);
       fetchBoard();
     } catch (err) {
@@ -433,46 +237,58 @@ const BoardPage = () => {
     <div style={{ background: "#f6f8fb", minHeight: "100vh" }}>
       <Navbar />
 
-      <div style={{ padding: "20px" }}>
-        <h2>{board.title}</h2>
-
-        {/* ✅ ADD LIST BUTTON */}
-        <div style={{ marginBottom: "20px" }}>
-          <button
-            onClick={() => setShowListDialog(true)}
-            style={{
-              padding: "8px 16px",
-              background: "#6366f1",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "14px",
-            }}
-          >
-            + Add List
-          </button>
+      <div className="board-wrapper" style={{ padding: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+          <div>
+            <h2 style={{ margin: 0 }}>{board.title}</h2>
+            <p style={{ margin: "8px 0 0", color: "#64748b" }}>
+              Your workboard with 3 fixed columns and live card data.
+            </p>
+          </div>
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div style={{ display: "flex", gap: "20px", overflowX: "auto", paddingBottom: "20px" }}>
+          <div className="board-container">
             {board.lists.map((list) => (
               <Droppable droppableId={String(list.id)} key={list.id}>
-                {(provided, snapshot) => (
+                {(provided) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
+                    className="list"
                     style={{
-                      flex: "0 0 320px",
-                      background: snapshot.isDraggingOver ? "#f0f0f0" : "#e5e7eb",
-                      padding: "15px",
-                      borderRadius: "10px",
-                      minHeight: "500px",
+                      background:
+                        list.title === "To Do"
+                          ? "#fef2f2"
+                          : list.title === "In Progress"
+                          ? "#eff6ff"
+                          : "#f0fdf4",
+                      padding: "18px",
+                      borderRadius: "16px",
+                      minHeight: "520px",
+                      display: "flex",
+                      flexDirection: "column",
                     }}
                   >
-                    <h4 style={{ marginBottom: "15px", fontWeight: "600" }}>
-                      {list.title}
-                    </h4>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
+                      <span
+                        style={{
+                          width: "10px",
+                          height: "10px",
+                          borderRadius: "50%",
+                          background:
+                            list.title === "To Do"
+                              ? "#ef4444"
+                              : list.title === "In Progress"
+                              ? "#4f46e5"
+                              : "#16a34a",
+                          display: "inline-block",
+                        }}
+                      />
+                      <h4 style={{ margin: 0, fontWeight: 700, fontSize: "1rem" }}>
+                        {list.title}
+                      </h4>
+                    </div>
 
                     {list.cards.map((card, index) => (
                       <Draggable
@@ -485,69 +301,18 @@ const BoardPage = () => {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            style={{
-                              background: snapshot.isDragging
-                                ? "#4f46e5"
-                                : "#fff",
-                              color: snapshot.isDragging ? "#fff" : "#000",
-                              padding: "12px",
-                              marginBottom: "10px",
-                              borderRadius: "8px",
-                              userSelect: "none",
-                              boxShadow: snapshot.isDragging
-                                ? "0 5px 15px rgba(0,0,0,0.3)"
-                                : "0 1px 3px rgba(0,0,0,0.1)",
-                              ...provided.draggableProps.style,
-                            }}
                           >
-                            <div style={{ fontWeight: "600", marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span>{card.title}</span>
-                              {card.priority && (
-                                <span
-                                  style={{
-                                    padding: "2px 8px",
-                                    borderRadius: "999px",
-                                    fontSize: "10px",
-                                    textTransform: "capitalize",
-                                    background:
-                                      card.priority === "high"
-                                        ? "#fecaca"
-                                        : card.priority === "medium"
-                                        ? "#fef9c3"
-                                        : "#d1fae5",
-                                    color:
-                                      card.priority === "high"
-                                        ? "#b91c1c"
-                                        : card.priority === "medium"
-                                        ? "#92400e"
-                                        : "#047857",
-                                  }}
-                                >
-                                  {card.priority}
-                                </span>
-                              )}
-                            </div>
-                            {card.description && (
-                              <div
-                                style={{
-                                  fontSize: "12px",
-                                  marginBottom: "4px",
-                                  opacity: 0.8,
-                                }}
-                              >
-                                {card.description}
-                              </div>
-                            )}
-                            {card.due_date && (
-                              <div
-                                style={{
-                                  fontSize: "12px",
-                                  color: snapshot.isDragging ? "#fff" : "#666",
-                                }}
-                              >
-                                📅 {new Date(card.due_date).toLocaleDateString()}
-                              </div>
-                            )}
+                            <TaskCard
+                              {...card}
+                              isDragging={snapshot.isDragging}
+                              boardId={board.id}
+                              onEdit={(card) => {
+                                setEditingCard(card);
+                                setShowEditCardDialog(true);
+                              }}
+                              onDelete={() => fetchBoard()}
+                              onRefresh={fetchBoard}
+                            />
                           </div>
                         )}
                       </Draggable>
@@ -555,23 +320,25 @@ const BoardPage = () => {
 
                     {provided.placeholder}
 
-                    {/* ✅ ADD CARD BUTTON */}
-                    <button
-                      onClick={() => openCardDialog(list.id)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        background: "#d1d5db",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        marginTop: "10px",
-                        fontSize: "14px",
-                        fontWeight: "500",
-                      }}
-                    >
-                      + Add card
-                    </button>
+                    <div style={{ marginTop: "auto" }}>
+                      <button
+                        onClick={() => openCardDialog(list.id)}
+                        style={{
+                          width: "100%",
+                          padding: "12px",
+                          background: "#e2e8f0",
+                          color: "#0f172a",
+                          border: "none",
+                          borderRadius: "10px",
+                          cursor: "pointer",
+                          marginTop: "18px",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        + Add card
+                      </button>
+                    </div>
                   </div>
                 )}
               </Droppable>
@@ -600,6 +367,18 @@ const BoardPage = () => {
             </Form.Group>
 
             <Form.Group className="mb-3">
+              <Form.Label>Badge/Status</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g., Not Started, On Track, At Risk"
+                value={cardForm.badge}
+                onChange={(e) =>
+                  setCardForm({ ...cardForm, badge: e.target.value })
+                }
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
               <Form.Label>Description</Form.Label>
               <Form.Control
                 as="textarea"
@@ -610,6 +389,20 @@ const BoardPage = () => {
                   setCardForm({ ...cardForm, description: e.target.value })
                 }
               />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Priority</Form.Label>
+              <Form.Select
+                value={cardForm.priority}
+                onChange={(e) =>
+                  setCardForm({ ...cardForm, priority: e.target.value })
+                }
+              >
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </Form.Select>
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -661,8 +454,261 @@ const BoardPage = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* ✅ EDIT CARD MODAL */}
+      <EditCardModal
+        card={editingCard}
+        show={showEditCardDialog}
+        onHide={() => {
+          setShowEditCardDialog(false);
+          setEditingCard(null);
+        }}
+        onSave={() => {
+          setShowEditCardDialog(false);
+          setEditingCard(null);
+          fetchBoard();
+        }}
+      />
     </div>
   );
 };
 
 export default BoardPage;
+
+//   return (
+//     <div style={{ background: "#f6f8fb", minHeight: "100vh" }}>
+//       <Navbar />
+
+//       <div style={{ padding: "20px" }}>
+//         <h2>{board.title}</h2>
+
+//         {/* ✅ ADD LIST BUTTON */}
+//         <div style={{ marginBottom: "20px" }}>
+//           <button
+//             onClick={() => setShowListDialog(true)}
+//             style={{
+//               padding: "8px 16px",
+//               background: "#6366f1",
+//               color: "#fff",
+//               border: "none",
+//               borderRadius: "6px",
+//               cursor: "pointer",
+//               fontSize: "14px",
+//             }}
+//           >
+//             + Add List
+//           </button>
+//         </div>
+
+//         <DragDropContext onDragEnd={handleDragEnd}>
+//           <div style={{ display: "flex", gap: "20px", overflowX: "auto", paddingBottom: "20px" }}>
+//             {board.lists.map((list) => (
+//               <Droppable droppableId={String(list.id)} key={list.id}>
+//                 {(provided, snapshot) => (
+//                   <div
+//                     ref={provided.innerRef}
+//                     {...provided.droppableProps}
+//                     style={{
+//                       flex: "0 0 320px",
+//                       background: snapshot.isDraggingOver ? "#f0f0f0" : "#e5e7eb",
+//                       padding: "15px",
+//                       borderRadius: "10px",
+//                       minHeight: "500px",
+//                     }}
+//                   >
+//                     <h4 style={{ marginBottom: "15px", fontWeight: "600" }}>
+//                       {list.title}
+//                     </h4>
+
+//                     {list.cards.map((card, index) => (
+//                       <Draggable
+//                         key={card.id}
+//                         draggableId={String(card.id)}
+//                         index={index}
+//                       >
+//                         {(provided, snapshot) => (
+//                           <div
+//                             ref={provided.innerRef}
+//                             {...provided.draggableProps}
+//                             {...provided.dragHandleProps}
+//                             style={{
+//                               background: snapshot.isDragging
+//                                 ? "#4f46e5"
+//                                 : "#fff",
+//                               color: snapshot.isDragging ? "#fff" : "#000",
+//                               padding: "12px",
+//                               marginBottom: "10px",
+//                               borderRadius: "8px",
+//                               userSelect: "none",
+//                               boxShadow: snapshot.isDragging
+//                                 ? "0 5px 15px rgba(0,0,0,0.3)"
+//                                 : "0 1px 3px rgba(0,0,0,0.1)",
+//                               ...provided.draggableProps.style,
+//                             }}
+//                           >
+//                             <div style={{ fontWeight: "600", marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+//                               <span>{card.title}</span>
+//                               {card.priority && (
+//                                 <span
+//                                   style={{
+//                                     padding: "2px 8px",
+//                                     borderRadius: "999px",
+//                                     fontSize: "10px",
+//                                     textTransform: "capitalize",
+//                                     background:
+//                                       card.priority === "high"
+//                                         ? "#fecaca"
+//                                         : card.priority === "medium"
+//                                         ? "#fef9c3"
+//                                         : "#d1fae5",
+//                                     color:
+//                                       card.priority === "high"
+//                                         ? "#b91c1c"
+//                                         : card.priority === "medium"
+//                                         ? "#92400e"
+//                                         : "#047857",
+//                                   }}
+//                                 >
+//                                   {card.priority}
+//                                 </span>
+//                               )}
+//                             </div>
+//                             {card.description && (
+//                               <div
+//                                 style={{
+//                                   fontSize: "12px",
+//                                   marginBottom: "4px",
+//                                   opacity: 0.8,
+//                                 }}
+//                               >
+//                                 {card.description}
+//                               </div>
+//                             )}
+//                             {card.due_date && (
+//                               <div
+//                                 style={{
+//                                   fontSize: "12px",
+//                                   color: snapshot.isDragging ? "#fff" : "#666",
+//                                 }}
+//                               >
+//                                 📅 {new Date(card.due_date).toLocaleDateString()}
+//                               </div>
+//                             )}
+//                           </div>
+//                         )}
+//                       </Draggable>
+//                     ))}
+
+//                     {provided.placeholder}
+
+//                     {/* ✅ ADD CARD BUTTON */}
+//                     <button
+//                       onClick={() => openCardDialog(list.id)}
+//                       style={{
+//                         width: "100%",
+//                         padding: "10px",
+//                         background: "#d1d5db",
+//                         border: "none",
+//                         borderRadius: "6px",
+//                         cursor: "pointer",
+//                         marginTop: "10px",
+//                         fontSize: "14px",
+//                         fontWeight: "500",
+//                       }}
+//                     >
+//                       + Add card
+//                     </button>
+//                   </div>
+//                 )}
+//               </Droppable>
+//             ))}
+//           </div>
+//         </DragDropContext>
+//       </div>
+
+//       {/* ✅ ADD CARD DIALOG */}
+//       <Modal show={showCardDialog} onHide={() => setShowCardDialog(false)}>
+//         <Modal.Header closeButton>
+//           <Modal.Title>Add Card</Modal.Title>
+//         </Modal.Header>
+//         <Modal.Body>
+//           <Form>
+//             <Form.Group className="mb-3">
+//               <Form.Label>Title *</Form.Label>
+//               <Form.Control
+//                 type="text"
+//                 placeholder="Enter card title"
+//                 value={cardForm.title}
+//                 onChange={(e) =>
+//                   setCardForm({ ...cardForm, title: e.target.value })
+//                 }
+//               />
+//             </Form.Group>
+
+//             <Form.Group className="mb-3">
+//               <Form.Label>Description</Form.Label>
+//               <Form.Control
+//                 as="textarea"
+//                 rows={3}
+//                 placeholder="Enter card description"
+//                 value={cardForm.description}
+//                 onChange={(e) =>
+//                   setCardForm({ ...cardForm, description: e.target.value })
+//                 }
+//               />
+//             </Form.Group>
+
+//             <Form.Group className="mb-3">
+//               <Form.Label>Due Date</Form.Label>
+//               <Form.Control
+//                 type="date"
+//                 value={cardForm.due_date}
+//                 onChange={(e) =>
+//                   setCardForm({ ...cardForm, due_date: e.target.value })
+//                 }
+//               />
+//             </Form.Group>
+//           </Form>
+//         </Modal.Body>
+//         <Modal.Footer>
+//           <Button variant="secondary" onClick={() => setShowCardDialog(false)}>
+//             Cancel
+//           </Button>
+//           <Button variant="primary" onClick={handleAddCard}>
+//             Add Card
+//           </Button>
+//         </Modal.Footer>
+//       </Modal>
+
+//       {/* ✅ ADD LIST DIALOG */}
+//       <Modal show={showListDialog} onHide={() => setShowListDialog(false)}>
+//         <Modal.Header closeButton>
+//           <Modal.Title>Add List</Modal.Title>
+//         </Modal.Header>
+//         <Modal.Body>
+//           <Form>
+//             <Form.Group className="mb-3">
+//               <Form.Label>List Title *</Form.Label>
+//               <Form.Control
+//                 type="text"
+//                 placeholder="Enter list title"
+//                 value={newListTitle}
+//                 onChange={(e) => setNewListTitle(e.target.value)}
+//               />
+//             </Form.Group>
+//           </Form>
+//         </Modal.Body>
+//         <Modal.Footer>
+//           <Button variant="secondary" onClick={() => setShowListDialog(false)}>
+//             Cancel
+//           </Button>
+//           <Button variant="primary" onClick={handleAddList}>
+//             Add List
+//           </Button>
+//         </Modal.Footer>
+//       </Modal>
+//     </div>
+//   );
+// };
+
+// export default BoardPage;

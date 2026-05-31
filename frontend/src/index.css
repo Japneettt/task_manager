@@ -409,19 +409,6 @@ td {
   margin-top: 12px;
 }
 
-/* ✅ AVATAR */
-/* .avatar {
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  background: #6366f1;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 10px;
-} */
-
 .listItem > div {
   flex: 1;
 }
@@ -611,4 +598,99 @@ td {
 .metricValue {
   font-size: 22px;
   font-weight: 600;
+}
+
+
+.modalCard {
+  width: 360px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+/* profile */
+.profileTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.sub {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* main row */
+.mainRow {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* ✅ circle */
+.circleWrap {
+  position: relative;
+}
+
+.circleWrap svg {
+  transform: rotate(-90deg);
+}
+
+.bg {
+  fill: none;
+  stroke: #e5e7eb;
+  stroke-width: 8;
+}
+
+.fg {
+  fill: none;
+  stroke: #22c55e;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: 0.3s;
+}
+
+.circleText {
+  position: absolute;
+  top: 35px;
+  left: 18px;
+  font-weight: bold;
+}
+
+/* stats */
+.statsBox {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat {
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.stat span {
+  font-size: 12px;
+  color: gray;
+}
+
+/* progress bar */
+.progressBar {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 15px;
+  display: flex;
+}
+
+.green {
+  background: #22c55e;
+}
+
+.orange {
+  background: #f59e0b;
 }

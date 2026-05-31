@@ -13,5 +13,6 @@ class Team(Base):
     type = Column(String, nullable=True)  # public/private/company
     description = Column(String, nullable=True)
     archived = Column(Boolean, default=False)
+    image_url = Column(String, nullable=True)
 
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))

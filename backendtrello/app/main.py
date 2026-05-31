@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from app.api.api import api_router
 from app.core.config import settings
 from app.websocket.manager import manager
@@ -24,6 +26,15 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "static" / "team_images"
+
+app.mount(
+    "/static",
+    StaticFiles(directory=BASE_DIR / "static"),
+    name="static"
+)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.websocket("/ws/notifications/{user_id}")
 async def websocket_notifications(websocket: WebSocket, user_id: str):

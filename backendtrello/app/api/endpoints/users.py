@@ -10,7 +10,6 @@ from app.core.security import verify_password, hash_password, get_current_token
 
 router = APIRouter()
 
-
 def get_initials(first_name: str, last_name: str) -> str:
     return f"{first_name[0]}{last_name[0]}".upper()
 
@@ -56,6 +55,7 @@ def get_me(
             current_user.first_name,
             current_user.last_name
         ),
+        avatar=current_user.avatar
     )
 
 
@@ -113,3 +113,26 @@ def deactivate_account(
 
     return {"message": "Account deactivated"}
 
+from fastapi import UploadFile, File
+import os, shutil
+
+UPLOAD_DIR = "uploads/profile_images"
+
+@router.post("/upload-profile")
+def upload_profile(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    file_path = f"{UPLOAD_DIR}/{current_user.id}_{file.filename}"
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file.file.read())
+
+    current_user.avatar = file_path
+    db.commit()
+
+    return {"avatar": file_path}   # ✅ VERY IMPORTANT

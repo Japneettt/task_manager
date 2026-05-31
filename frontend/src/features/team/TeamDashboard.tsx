@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../services/api";
@@ -31,15 +30,15 @@ const TeamDashboard = () => {
       console.error("Fetch error:", err);
     }
   };
-useEffect(() => {
-  fetchData();
-
-  const interval = setInterval(() => {
+  useEffect(() => {
     fetchData();
-  }, 5000);
 
-  return () => clearInterval(interval);
-}, []);
+    const interval = setInterval(() => {
+      fetchData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
   // ✅ ✅ WEBSOCKET + INITIAL LOAD
   // useEffect(() => {
   //   fetchData();
@@ -82,7 +81,21 @@ useEffect(() => {
   return (
     <div style={{ padding: "20px" }}>
       <h2 style={{ color: "#4f46e5" }}>{team?.name}</h2>
-
+      {/* ✅ TEAM IMAGE */}
+      <div
+        style={{
+          width: "100%",
+          height: "180px",
+          borderRadius: "12px",
+          marginTop: "15px",
+          marginBottom: "20px",
+          backgroundImage: `url(${team?.image_url ||
+            "https://source.unsplash.com/800x600/?abstract,team"
+            })`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
       {/* ✅ MEMBERS */}
       {team && (
         <>

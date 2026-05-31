@@ -1,10 +1,10 @@
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form ,Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
+from pathlib import Path
 from uuid import UUID
-# from app.websocket.manager import manager
-# import asyncio
+import uuid
+from app.websocket.manager import manager
 from app.utils.email import send_invite_email
 from app.core.database import get_db
 from app.api.endpoints.users import get_current_user
@@ -20,24 +20,47 @@ from app.services.notification_service import create_notification
 
 router = APIRouter()
 
-# ✅ CREATE TEAM
-@router.post("/teams", response_model=TeamRead)
-def create_team(
-    data: TeamCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    team = Team(
-        name=data.name,
-        type=data.type,
-        description=data.description,
-        owner_id=current_user.id
-    )
+# Upload directory for team images (app/static/team_images)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+UPLOAD_DIR = BASE_DIR / "static" / "team_images"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+def get_default_team_image():
+    return f"https://source.unsplash.com/800x600/?team,abstract&sig={uuid.uuid4().hex}"
+
+async def save_uploaded_team_image(image: UploadFile, request: Request) -> str:
+    extension = Path(image.filename).suffix or ".jpg"
+    filename = f"{uuid.uuid4().hex}{extension}"
+    filepath = UPLOAD_DIR / filename
+
+    # Read file content and write to disk
+    content = await image.read()
+    with open(filepath, "wb") as buffer:
+        buffer.write(content)
+
+    # Return a URL served by StaticFiles mount
+    return str(request.url_for("static", path=f"team_images/{filename}"))
+
+def _create_team(
+    db: Session,
+    current_user: User,
+    name: str,
+    team_type: str,
+    description: str,
+    image_url: str,
+) -> Team:
+    team = Team(
+        name=name,
+        type=team_type,
+        description=description,
+        owner_id=current_user.id,
+        image_url=image_url
+    )
     db.add(team)
     db.commit()
     db.refresh(team)
-
+ 
     member = TeamMember(
         team_id=team.id,
         user_id=current_user.id,
@@ -45,10 +68,108 @@ def create_team(
     )
     db.add(member)
     db.commit()
-
+ 
     return team
 
 
+# ✅ CREATE TEAM
+@router.post("/teams", response_model=TeamRead)
+async def create_team(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        name = form.get("name")
+        team_type = form.get("type")
+        description = form.get("description") or ""
+        image = form.get("image")
+
+        if not name or not team_type:
+            raise HTTPException(status_code=400, detail="Name and type are required")
+
+        image_url = get_default_team_image()
+        if image and hasattr(image, "filename") and image.filename:
+          image_url = await save_uploaded_team_image(image, request)
+
+
+
+        print("IMAGE RECEIVED:", image)
+        print("FILENAME:", getattr(image, "filename", None))
+
+        return _create_team(
+            db,
+            current_user,
+            str(name),
+            str(team_type),
+            str(description),
+            image_url,
+        )
+
+    body = await request.json()
+    data = TeamCreate(**body)
+    image_url = data.image_url or get_default_team_image()
+    return _create_team(
+        db,
+        current_user,
+        data.name,
+        data.type,
+        data.description,
+        image_url,
+    )
+# @router.post("/teams", response_model=TeamRead)
+# def create_team(
+#     data: TeamCreate,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user),
+# ):
+#     team = Team(
+#         name=data.name,
+#         type=data.type,
+#         description=data.description,
+#         owner_id=current_user.id
+#     )
+
+#     db.add(team)
+#     db.commit()
+#     db.refresh(team)
+
+#     member = TeamMember(
+#         team_id=team.id,
+#         user_id=current_user.id,
+#         role="admin"
+#     )
+#     db.add(member)
+#     db.commit()
+
+#     return team
+
+
+@router.post("/teams/upload", response_model=TeamRead)
+async def create_team_with_image(
+    request: Request,
+    name: str = Form(...),
+    type: str = Form(...),
+    description: str = Form(""),
+    image: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    image_url = get_default_team_image()
+
+    if image:
+        image_url = await save_uploaded_team_image(image, request)
+    return _create_team(
+        db,
+        current_user,
+        name,
+        type,
+        description,
+        image_url,
+    )
+    
 # ✅ GET USER TEAMS
 @router.get("/teams")
 def get_user_teams(
@@ -59,21 +180,26 @@ def get_user_teams(
         TeamMember.user_id == current_user.id
     )
 
-    # teams = db.query(Team).filter(
-    #     or_(
-    #         Team.owner_id == current_user.id,
-    #         Team.id.in_(member_teams)
-    #     )
-    # ).all()
     teams = db.query(Team).filter(
     or_(
         Team.owner_id == current_user.id,
         Team.id.in_(member_teams)
     ),
-    Team.archived == False   # ✅ ADD HERE
+    # Team.archived == False   # ✅ ADD HERE
 ).all()
 
-    return teams
+    # return teams
+    return [
+        {
+            "id": str(team.id),
+            "name": team.name,
+            "type": team.type,
+            "description": team.description,
+            "image_url": team.image_url,
+            "owner_id": str(team.owner_id) if team.owner_id else None,
+        }
+        for team in teams
+    ]
 
 
 # ✅ ✅ ✅ INVITE MEMBERS (MULTI EMAIL WORKING)
@@ -333,6 +459,7 @@ def get_team(
         "name": team.name,
         "type": team.type,
         "description": team.description,
+        "image_url": team.image_url,
         "members": member_data,
         "invites": invite_data
     }
@@ -352,7 +479,7 @@ def delete_team(
         raise HTTPException(status_code=403, detail="Not allowed")
 
     # ✅ DELETE DEPENDENCIES FIRST
-    #db.query(Board).filter(Board.team_id == team_id).delete()
+    db.query(Board).filter(Board.team_id == team_id).delete()
     db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
     db.query(TeamInvite).filter(TeamInvite.team_id == team_id).delete()
 
@@ -370,11 +497,20 @@ def archive_team(
     current_user: User = Depends(get_current_user)
 ):
     team = db.query(Team).filter(Team.id == team_id).first()
-
+ 
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+ 
+    # allow owner or team admin member to archive
+    allowed = False
+    if team.owner_id == current_user.id:
+        allowed = True
+    else:
+        member = db.query(TeamMember).filter(TeamMember.team_id == team_id, TeamMember.user_id == current_user.id).first()
+        if member and getattr(member, "role", "") == "admin":
+            allowed = True
 
-    if team.owner_id != current_user.id:
+    if not allowed:
         raise HTTPException(status_code=403, detail="Not allowed")
 
     team.archived = True
@@ -382,6 +518,34 @@ def archive_team(
 
     return {"message": "Team archived"}
 
+
+@router.patch("/teams/{team_id}/unarchive")
+def unarchive_team(
+    team_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    team = db.query(Team).filter(Team.id == team_id).first()
+
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # allow owner or team admin member to unarchive
+    allowed = False
+    if team.owner_id == current_user.id:
+        allowed = True
+    else:
+        member = db.query(TeamMember).filter(TeamMember.team_id == team_id, TeamMember.user_id == current_user.id).first()
+        if member and getattr(member, "role", "") == "admin":
+            allowed = True
+
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    team.archived = False
+    db.commit()
+
+    return {"message": "Team unarchived"}
 
 @router.get("/teams/archived")
 def get_archived_teams(
@@ -394,3 +558,41 @@ def get_archived_teams(
     ).all()
 
     return teams
+
+import re
+
+@router.get("/admin/teams")
+def get_all_teams(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    teams = db.query(Team).all()
+
+    def clean_url(url: str):
+        if not url:
+            return None
+
+        # ✅ remove HTML tags like <a ...>
+        if "<a" in url:
+            url = re.sub(r"<.*?>", "", url).strip()
+
+        # ✅ final safety
+        if not url.startswith("http"):
+            return None
+
+        return url
+
+    return [
+        {
+            "id": str(team.id),
+            "name": team.name,
+            "type": team.type,
+            "description": team.description,
+            "image_url": clean_url(team.image_url),  # ✅ FIXED HERE
+            "owner": str(team.owner_id),
+            "members_count": db.query(TeamMember)
+                .filter(TeamMember.team_id == team.id)
+                .count()
+        }
+        for team in teams
+    ]

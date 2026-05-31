@@ -7,12 +7,9 @@ import { auth, googleProvider } from "../../services/firebase";
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const navigate = useNavigate();
-
 
   // ✅ LOGIN HANDLER (REAL API)
   const handleLogin = async (e: React.FormEvent) => {
@@ -150,8 +147,27 @@ const AuthPage = () => {
               </Form>
 
 
+              {/* ✅ OR DIVIDER */}
+              <div
+                style={{
+                  textAlign: "center",
+                  margin: "15px 0",
+                  color: "#9ca3af",
+                  fontSize: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                }}
+              >
+                <div style={{ flex: 1, height: "1px", background: "#e5e7eb" }}></div>
+                <span>- or -</span>
+                <div style={{ flex: 1, height: "1px", background: "#e5e7eb" }}></div>
+              </div>
+
+
+
               {/* ✅ GOOGLE LOGIN BUTTON */}
-              <Button
+              {/* <Button
                 onClick={handleGoogleLogin}
                 style={{
                   marginTop: "10px",
@@ -162,35 +178,70 @@ const AuthPage = () => {
                 }}
               >
                 Continue with Google
+              </Button> */}
+
+              {/* ✅ GOOGLE LOGIN BUTTON (RED like image 1) */}
+              <Button
+                onClick={handleGoogleLogin}
+                style={{
+                  width: "100%",
+                  background: "#db4437",  // ✅ RED
+                  color: "#fff",
+                  border: "none",
+                  padding: "10px",
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                G Login with Google
               </Button>
 
 
+
               <Button
-  onClick={async () => {
-    try {
-      const res = await api.post("/auth/admin/login", {
-        email,
-        password,
-      });
+                onClick={async () => {
+                  try {
+                    const res = await api.post("/auth/admin/login", {
+                      email,
+                      password,
+                    });
 
-      localStorage.setItem("token", res.data.access_token);
-      localStorage.setItem("isAdmin", "true");
+                    localStorage.setItem("token", res.data.access_token);
+                    localStorage.setItem("isAdmin", "true");
 
-      navigate("/admin");
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || "Admin login failed");
-    }
-  }}
-  style={{
-    marginTop: "10px",
-    width: "100%",
-    background: "black",
-    color: "#00f0ff",
-    border: "1px solid #00f0ff",
-  }}
->
-  🔐 Login as Admin
-</Button>
+                    navigate("/admin");
+                  } catch (err: any) {
+                    setError(err?.response?.data?.detail || "Admin login failed");
+                  }
+                }}
+                // style={{
+                //   marginTop: "10px",
+                //   width: "100%",
+                //   background: "black",
+                //   color: "#00f0ff",
+                //   border: "1px solid #00f0ff",
+                // }}
+
+                style={{
+                  marginTop: "10px",
+                  width: "100%",
+                  background: "#3b5998", // ✅ FACEBOOK DARK BLUE
+                  color: "#fff",
+                  border: "none",
+                  padding: "10px",
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+
+              >
+                🔐 Login as Admin
+              </Button>
 
 
               {/* ✅ FOOTER */}

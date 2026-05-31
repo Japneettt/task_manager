@@ -7,12 +7,14 @@ class TeamCreate(BaseModel):
     name: str
     type: str
     description: str
+    image_url: Optional[str] = None
  
 class TeamRead(BaseModel):
     id: UUID
     name: str
     type: str
     description: str
+    image_url: Optional[str] = None
  
     class Config:
         from_attributes = True

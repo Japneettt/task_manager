@@ -12,7 +12,7 @@ class CardCreate(BaseModel):
     # assigned_to: Optional[str] = None   # ✅ email
     priority: Optional[str] = "Medium"
     due_date: Optional[datetime] = None
-
+    badge: Optional[str] = None  # ✅ Custom badge/status
 
 class CardRead(BaseModel):
     id: UUID
@@ -23,6 +23,7 @@ class CardRead(BaseModel):
     assigned_to: Optional[UUID]
     priority: Optional[str]
     due_date: Optional[datetime]
+    badge: Optional[str]  # ✅ Custom badge/status
 
     class Config:
         from_attributes = True

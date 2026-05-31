@@ -6,6 +6,7 @@ type User = {
   first_name: string;
   last_name: string;
   email: string;
+  avatar?: string;
 };
 
 type Notification = {
@@ -38,6 +39,23 @@ const Navbar = () => {
 
     fetchUser();
   }, []);
+  useEffect(() => {
+  const interval = setInterval(() => {
+
+    if (localStorage.getItem("refreshUser")) {
+
+      api.get("/users/me").then(res => {
+        setUser(res.data);
+        localStorage.removeItem("refreshUser");
+      });
+
+    }
+
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
+  const goToProfile = () => navigate("/profile");
 
   // ✅ FETCH NOTIFICATION COUNT
   const fetchNotifications = async () => {
@@ -56,14 +74,14 @@ const Navbar = () => {
   //   fetchNotifications();
   // }, []);
   useEffect(() => {
-  fetchNotifications();
-
-  const interval = setInterval(() => {
     fetchNotifications();
-  }, 5000);
 
-  return () => clearInterval(interval);
-}, []);
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // ✅ LOGOUT
   const handleLogout = () => {
@@ -145,46 +163,78 @@ const Navbar = () => {
         </span>
 
         <span
-  style={activeStyle("/activity")}
-  onClick={() => navigate("/activity")}
->
-  Activity
-</span>
-</div>
+          style={activeStyle("/activity")}
+          onClick={() => navigate("/activity")}
+        >
+          Activity
+        </span>
+      </div>
 
       {/* ✅ PROFILE */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
 
-        {/* Avatar */}
+        {/* ✅ CLICKABLE AREA */}
         <div
+          onClick={goToProfile}
           style={{
-            width: "35px",
-            height: "35px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-            color: "#fff",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 600,
+            gap: "10px",
+            cursor: "pointer"
           }}
         >
-          {user ? getInitials(user.first_name, user.last_name) : ".."}
-        </div>
 
-        {/* User Info */}
-        <div>
+          {/* ✅ AVATAR */}
+          <div
+            style={{
+              width: "35px",
+              height: "35px",
+              borderRadius: "50%",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#ddd",
+              fontWeight: 600,
+              color: "#fff"
+            }}
+
+          >
+
+            {user?.avatar ? (
+              <img
+                src={`http://localhost:8000/${user.avatar}`}
+                alt="avatar"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              <span>
+                {user ? getInitials(user.first_name, user.last_name) : ".."}
+              </span>
+            )}
+
+            {/* {user ? getInitials(user.first_name, user.last_name) : ".."} */}
+          </div>
+
+          {/* ✅ USER INFO */}
           <div>
-            {user
-              ? `${user.first_name} ${user.last_name}`
-              : "Loading..."}
+            <div>
+              {user
+                ? `${user.first_name} ${user.last_name}`
+                : "Loading..."}
+            </div>
+            <div style={{ fontSize: "12px", color: "#6b7280" }}>
+              {user?.email}
+            </div>
           </div>
-          <div style={{ fontSize: "12px", color: "#6b7280" }}>
-            {user?.email}
-          </div>
+
         </div>
 
-        {/* Logout */}
+        {/* ✅ LOGOUT (SEPARATE CLICK) */}
         <span
           onClick={handleLogout}
           style={{
@@ -195,6 +245,7 @@ const Navbar = () => {
         >
           Logout
         </span>
+
       </div>
     </div>
   );

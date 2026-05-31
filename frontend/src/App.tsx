@@ -18,7 +18,7 @@ import InviteMembers from "./features/team/InviteMembers";
 import TeamDashboard from "./features/team/TeamDashboard";
 import HomePage from "./features/HomePage";
 
-
+import ProfilePage from "./features/pages/ProfilePage";
 import AdminLayout from "./features/admin/AdminLayout";
 import AdminDashboard from "./features/admin/AdminDashboard";
 import TeamManagement from "./features/admin/TeamManagement";
@@ -140,6 +140,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify" element={<VerifyOtpPage />} />
         <Route path="/activity" element={<ActivityPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route
           path="/login"
           element={

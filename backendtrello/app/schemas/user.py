@@ -24,6 +24,7 @@ class UserRead(UserBase):
     is_active: bool
     created_at: datetime
     initials: str
+    avatar: Optional[str]=None
 
     class Config:
         from_attributes = True
