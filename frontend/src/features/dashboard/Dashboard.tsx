@@ -18,9 +18,21 @@ export default function Dashboard() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamName, setTeamName] = useState("");
   const [teamDesc, setTeamDesc] = useState("");
+  const [teamImage, setTeamImage] = useState<File | null>(null);
   const [inviteEmails, setInviteEmails] = useState("");
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  
+// ✅ ADD HERE
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(search);
+  }, 300);
+
+  return () => clearTimeout(timer);
+}, [search]);
+
   const [loading, setLoading] = useState(true);
   const [createError, setCreateError] = useState<string | null>(null);
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
@@ -108,9 +120,31 @@ export default function Dashboard() {
   }, [plannerData]);
 
   const filteredTasks = useMemo(() => {
-    if (!search) return tasks;
-    return tasks.filter((task) => task?.title?.toLowerCase().includes(search.toLowerCase()));
-  }, [search, tasks]);
+    if (!debouncedSearch) return tasks;
+    return tasks.filter((task) => task?.title?.toLowerCase().includes(debouncedSearch.toLowerCase()));
+  }, [debouncedSearch, tasks]);
+  const filteredBoards = useMemo(() => {
+  if (!debouncedSearch) return boards;
+  return boards.filter((b) =>
+    (b.title || "")
+      .toLowerCase()
+      .includes(debouncedSearch.toLowerCase())
+  );
+}, [debouncedSearch, boards]);
+
+const filteredTeams = useMemo(() => {
+  if (!debouncedSearch) return teams;
+  return teams.filter((t) =>
+    (t.name || "")
+      .toLowerCase()
+      .includes(debouncedSearch.toLowerCase())
+  );
+}, [debouncedSearch, teams]);
+// const unifiedResults = [
+//   ...filteredTeams.map(t => ({ type: "team", ...t })),
+//   ...filteredBoards.map(b => ({ type: "board", ...b })),
+//   ...filteredTasks.map(c => ({ type: "card", ...c })),
+// ];
 
   const recentTeams = useMemo(() => teams.slice(-3).reverse(), [teams]);
 
@@ -145,13 +179,29 @@ export default function Dashboard() {
       setCreateError("Team name is required");
       return;
     }
-
     try {
-      const createRes = await api.post("/teams", {
-        name: teamName,
-        description: teamDesc,
-        type: "private",
-      });
+      let createRes;
+      if (teamImage) {
+        const formData = new FormData();
+        formData.append("name", teamName);
+        formData.append("description", teamDesc);
+        formData.append("type", "private");
+        formData.append("image", teamImage);
+        createRes = await api.post("/teams", formData);
+      } else {
+        createRes = await api.post("/teams", {
+          name: teamName,
+          description: teamDesc,
+          type: "private",
+        });
+      }
+
+    // try {
+    //   const createRes = await api.post("/teams", {
+    //     name: teamName,
+    //     description: teamDesc,
+    //     type: "private",
+    //   });
 
       const createdTeamId = createRes.data?.id;
       if (createdTeamId && inviteEmails.trim()) {
@@ -166,6 +216,7 @@ export default function Dashboard() {
       setTeams(teamsRes.data || []);
       setTeamName("");
       setTeamDesc("");
+      setTeamImage(null);
       setInviteEmails("");
     } catch (err: any) {
       console.error("Team creation failed", err);
@@ -203,6 +254,85 @@ export default function Dashboard() {
           </div>
 
           <div style={heroActions}>
+  <div style={{ position: "relative", width: "100%", maxWidth: 420 }}>
+    
+    <div style={searchStyle}>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search tasks, boards, teams"
+        style={searchInputStyle}
+      />
+    </div>
+    {debouncedSearch && (
+  <div
+    style={{
+      position: "absolute",
+      top: "55px",
+      left: 0,
+      width: "100%",
+      background: "#fff",
+      borderRadius: "10px",
+      border: "1px solid #e5e7eb",
+      boxShadow: "0 8px 25px rgba(0,0,0,0.08)",
+      zIndex: 1000,
+      maxHeight: "300px",
+      overflowY: "auto",
+    }}
+  >
+    {/* ✅ TEAMS */}
+    {filteredTeams.length > 0 && (
+      <>
+        <div style={{ padding: "10px", fontWeight: 600 }}>Teams</div>
+        {filteredTeams.map((t) => (
+          <div
+            key={t.id}
+            style={{ padding: "8px 12px", cursor: "pointer" }}
+            onClick={() => navigate(`/teams/${t.id}`)}
+          >
+            👥 {t.name}
+          </div>
+        ))}
+      </>
+    )}
+
+    {/* ✅ BOARDS */}
+    {filteredBoards.length > 0 && (
+      <>
+        <div style={{ padding: "10px", fontWeight: 600 }}>Boards</div>
+        {filteredBoards.map((b) => (
+          <div
+            key={b.id}
+            style={{ padding: "8px 12px", cursor: "pointer" }}
+            onClick={() => navigate(`/boards/${b.id}`)}
+          >
+            📋 {b.title}
+          </div>
+        ))}
+      </>
+    )}
+
+    {/* ✅ CARDS */}
+    {filteredTasks.length > 0 && (
+      <>
+        <div style={{ padding: "10px", fontWeight: 600 }}>Cards</div>
+        {filteredTasks.map((task) => (
+          <div
+            key={task.id}
+            style={{ padding: "8px 12px", cursor: "pointer" }}
+            onClick={() => setSelectedTask(task)}
+          >
+            ✅ {task.title}
+          </div>
+        ))}
+      </>
+    )}
+  </div>
+)}
+</div>   
+</div>
+
+          {/* <div style={heroActions}>
             <div style={searchStyle}>
               <input
                 value={search}
@@ -211,7 +341,7 @@ export default function Dashboard() {
                 style={searchInputStyle}
               />
             </div>
-          </div>
+          </div> */}
         </section>
 
         <section style={statsRow}>
@@ -279,6 +409,45 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          {/* <div style={panelBlock}>
+  <div style={sectionTag}>Search Results</div>
+
+  {debouncedSearch && (
+    <>
+      <h4>Teams</h4>
+      {filteredTeams.map((t) => (
+        <div
+          key={t.id}
+          style={{ padding: "8px", cursor: "pointer" }}
+          onClick={() => navigate(`/teams/${t.id}`)}
+        >
+          👥 {t.name}
+        </div>
+      ))}
+
+      <h4>Boards</h4>
+      {filteredBoards.map((b) => (
+        <div
+          key={b.id}
+          style={{ padding: "8px", cursor: "pointer" }}
+          onClick={() => navigate(`/boards/${b.id}`)}
+        >
+          📋 {b.title}
+        </div>
+      ))}
+      <h4>Cards</h4>
+      {filteredTasks.map((task) => (
+        <div
+          key={task.id}
+          style={{ padding: "8px", cursor: "pointer" }}
+          onClick={() => setSelectedTask(task)}
+        >
+          ✅ {task.title}
+        </div>
+      ))}
+    </>
+  )}
+</div> */}
 
           <aside style={sidebarPanel}>
             <div style={sidebarCard}>
@@ -301,6 +470,18 @@ export default function Dashboard() {
                 placeholder="Invite members (comma separated)"
                 style={inputStyle}
               />
+              <label style={{ display: "block", margin: "12px 0", fontSize: "14px", color: "#334155" }}>
+                Team image (optional)
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "block", marginTop: "8px" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    setTeamImage(file);
+                  }}
+                />
+              </label>
               <button onClick={createTeam} style={buttonPrimary}>
                 Create team
               </button>

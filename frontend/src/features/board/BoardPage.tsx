@@ -248,7 +248,12 @@ const BoardPage = () => {
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="board-container">
+          <div className="board-container" style={{
+            display: "flex",
+            gap: "20px",
+            alignItems: "flex-start",
+          }}>
+
             {board.lists.map((list) => (
               <Droppable droppableId={String(list.id)} key={list.id}>
                 {(provided) => (
@@ -257,12 +262,16 @@ const BoardPage = () => {
                     {...provided.droppableProps}
                     className="list"
                     style={{
+
+                      minWidth: "300px",   // ✅ important
+                      flex: "0 0 320px",   // ✅ fixed width column
+
                       background:
                         list.title === "To Do"
                           ? "#fef2f2"
                           : list.title === "In Progress"
-                          ? "#eff6ff"
-                          : "#f0fdf4",
+                            ? "#eff6ff"
+                            : "#f0fdf4",
                       padding: "18px",
                       borderRadius: "16px",
                       minHeight: "520px",
@@ -280,8 +289,8 @@ const BoardPage = () => {
                             list.title === "To Do"
                               ? "#ef4444"
                               : list.title === "In Progress"
-                              ? "#4f46e5"
-                              : "#16a34a",
+                                ? "#4f46e5"
+                                : "#16a34a",
                           display: "inline-block",
                         }}
                       />

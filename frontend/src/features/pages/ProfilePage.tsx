@@ -37,6 +37,24 @@ const ProfilePage = () => {
 
     setUploading(false);
   };
+  const uploadCover = async (file: File) => {
+  if (!file) return;
+
+  try {
+    const data = new FormData();
+    data.append("file", file);
+
+    const res = await api.post("/users/upload-cover", data);
+
+    setUser((prev: any) => ({
+      ...prev,
+      cover_photo: res.data.cover + `?t=${Date.now()}`
+    }));
+
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   const updateProfile = async () => {
     await api.put("/users/me", {
@@ -61,10 +79,33 @@ const ProfilePage = () => {
       </div>
 
       {/* COVER */}
-      {/* ✅ COVER */}
-      <div className="cover">
+      {/* <div className="cover">
         <button className="coverBtn">📷 Change Cover</button>
-      </div>
+      </div> */}
+      <div
+  className="cover"
+  style={{
+    backgroundImage: user.cover_photo
+      ? `url(http://localhost:8000/${user.cover_photo})`
+      : "linear-gradient(135deg,#4f46e5,#3b82f6)",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  }}
+>
+  <input
+    type="file"
+    id="coverInput"
+    style={{ display: "none" }}
+    onChange={(e) => {
+      const file = e.target.files?.[0];
+      if (file) uploadCover(file);
+    }}
+  />
+
+  <label htmlFor="coverInput" className="coverBtn">
+    📷 Change Cover
+  </label>
+</div>
 
       {/* ✅ WHITE OVERLAY PANEL */}
       <div className="profileContainer">

@@ -14,6 +14,7 @@ type Board = {
 const BoardsDashboard = () => {
   const [boards, setBoards] = useState<Board[]>([]);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
@@ -53,12 +54,13 @@ const BoardsDashboard = () => {
       console.log("Creating board:", title);
       const res = await api.post("/boards/", {
         title: title,
-        description: null,
+        description: description || null,
         team_id: null,
       });
 
       console.log("Board created successfully:", res.data);
       setTitle("");
+      setDescription("");
       fetchBoards();
     } catch (err) {
       console.error("Error creating board", err);
@@ -130,6 +132,18 @@ const BoardsDashboard = () => {
               marginRight: "10px",
             }}
           />
+          <input
+  value={description}
+  onChange={(e) => setDescription(e.target.value)}
+  placeholder="Board description"
+  style={{
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    marginRight: "10px",
+    marginTop: "10px"
+  }}
+/>
           <button onClick={createBoard}>Create</button>
         </div>
 

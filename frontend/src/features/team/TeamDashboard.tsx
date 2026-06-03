@@ -39,6 +39,11 @@ const TeamDashboard = () => {
 
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+  if (team) {
+    console.log("TEAM IMAGE URL:", team.image_url);
+  }
+}, [team]);
   // ✅ ✅ WEBSOCKET + INITIAL LOAD
   // useEffect(() => {
   //   fetchData();
@@ -89,9 +94,14 @@ const TeamDashboard = () => {
           borderRadius: "12px",
           marginTop: "15px",
           marginBottom: "20px",
-          backgroundImage: `url(${team?.image_url ||
-            "https://source.unsplash.com/800x600/?abstract,team"
-            })`,
+          // backgroundImage: `url(${team?.image_url ||
+          //   "https://source.unsplash.com/800x600/?abstract,team"
+          //   })`,
+          backgroundImage: `url(${
+  team?.image_url
+    ? `http://localhost:8000${team.image_url}`
+    : "https://source.unsplash.com/800x600/?abstract,team"
+})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from uuid import UUID
-
+from datetime import datetime
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRead, UserUpdate, ChangePassword
@@ -55,7 +55,8 @@ def get_me(
             current_user.first_name,
             current_user.last_name
         ),
-        avatar=current_user.avatar
+        avatar=current_user.avatar,
+        cover_photo=current_user.cover_photo,
     )
 
 
@@ -85,6 +86,8 @@ def update_me(
             current_user.first_name,
             current_user.last_name
         ),
+        avatar=current_user.avatar,
+        cover_photo=current_user.cover_photo,
     )
 
 
@@ -136,3 +139,32 @@ def upload_profile(
     db.commit()
 
     return {"avatar": file_path}   # ✅ VERY IMPORTANT
+
+
+COVER_DIR = "uploads/cover_photos"
+os.makedirs(COVER_DIR, exist_ok=True)
+
+
+@router.post("/upload-cover")
+async def upload_cover(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    ext = file.filename.split(".")[-1]
+    filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}.{ext}"
+
+# ✅ CLEAN RELATIVE PATH
+    relative_path = f"uploads/cover_photos/{filename}"
+
+# ✅ SAVE FILE (correct absolute path)
+    absolute_path = os.path.join("uploads/cover_photos", filename)
+
+    with open(absolute_path, "wb") as f:
+      f.write(await file.read())
+
+# ✅ SAVE CLEAN PATH IN DB
+    current_user.cover_photo = relative_path
+    db.commit()
+
+    return {"cover": relative_path}

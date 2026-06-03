@@ -25,6 +25,7 @@ class UserRead(UserBase):
     created_at: datetime
     initials: str
     avatar: Optional[str]=None
+    cover_photo: Optional[str]=None
 
     class Config:
         from_attributes = True

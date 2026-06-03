@@ -21,9 +21,9 @@ from app.services.notification_service import create_notification
 router = APIRouter()
 
 # Upload directory for team images (app/static/team_images)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
-UPLOAD_DIR = BASE_DIR / "static" / "team_images"
+UPLOAD_DIR = BASE_DIR / "uploads" / "team_images"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_default_team_image():
@@ -40,7 +40,8 @@ async def save_uploaded_team_image(image: UploadFile, request: Request) -> str:
         buffer.write(content)
 
     # Return a URL served by StaticFiles mount
-    return str(request.url_for("static", path=f"team_images/{filename}"))
+    return f"/uploads/team_images/{filename}"
+    # return str(request.url_for("static", path=f"team_images/{filename}"))
 
 def _create_team(
     db: Session,

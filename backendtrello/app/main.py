@@ -26,15 +26,23 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
-BASE_DIR = Path(__file__).resolve().parent
-UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "static" / "team_images"
+# BASE_DIR = Path(__file__).resolve().parent
+# UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "static" / "team_images"
 
-app.mount(
-    "/static",
-    StaticFiles(directory=BASE_DIR / "static"),
-    name="static"
-)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# app.mount(
+#     "/static",
+#     StaticFiles(directory=BASE_DIR / "static"),
+#     name="static"
+# )
+# app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent  # goes to backendtrello/
+
+UPLOAD_DIR = BASE_DIR / "uploads"
+
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
 
 @app.websocket("/ws/notifications/{user_id}")
 async def websocket_notifications(websocket: WebSocket, user_id: str):
