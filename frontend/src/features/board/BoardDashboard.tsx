@@ -16,6 +16,7 @@ const BoardsDashboard = () => {
   const [title, setTitle] = useState("");
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [description, setDescription] = useState("");
   const navigate = useNavigate();
 
   // ✅ FETCH BOARDS (✅ FIXED ENDPOINT)
@@ -53,12 +54,13 @@ const BoardsDashboard = () => {
       console.log("Creating board:", title);
       const res = await api.post("/boards/", {
         title: title,
-        description: null,
+        description: description || null,
         team_id: null,
       });
 
       console.log("Board created successfully:", res.data);
       setTitle("");
+      setDescription("");
       fetchBoards();
     } catch (err) {
       console.error("Error creating board", err);
@@ -123,6 +125,17 @@ const BoardsDashboard = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Create new board"
+            style={{
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              marginRight: "10px",
+            }}
+          />
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Board description"
             style={{
               padding: "10px",
               borderRadius: "8px",

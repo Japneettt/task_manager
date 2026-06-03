@@ -20,6 +20,7 @@ import AdminLayout from "./features/admin/AdminLayout";
 import AdminDashboard from "./features/admin/AdminDashboard";
 import TeamManagement from "./features/admin/TeamManagement";
 import UserInsights from "./features/admin/UserInsights";
+import ProfilePage from "./features/Pages/ProfilePage";
 /**
  * ✅ TEMP AUTH CHECK
  */
@@ -161,6 +162,8 @@ function App() {
           <Route path="teams" element={<TeamManagement />} />
           <Route path="users" element={<UserInsights />} />
         </Route>
+
+        <Route path="/profile" element={<ProfilePage/>} />
  
         {/* ✅ FALLBACK */}
         <Route path="*" element={<Navigate to="/" replace />} />

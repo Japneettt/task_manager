@@ -7,6 +7,8 @@ from app.core.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRead, UserUpdate, ChangePassword
 from app.core.security import verify_password, hash_password, get_current_token
+from datetime import datetime
+from fastapi import UploadFile, File
 
 router = APIRouter()
 
@@ -113,3 +115,58 @@ def deactivate_account(
 
     return {"message": "Account deactivated"}
 
+
+ 
+from fastapi import UploadFile, File
+import os, shutil
+ 
+UPLOAD_DIR = "uploads/profile_images"
+ 
+@router.post("/upload-profile")
+def upload_profile(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+ 
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+ 
+    file_path = f"{UPLOAD_DIR}/{current_user.id}_{file.filename}"
+ 
+    with open(file_path, "wb") as buffer:
+        buffer.write(file.file.read())
+ 
+    current_user.avatar = file_path
+    db.commit()
+ 
+    return {"avatar": file_path}   # ✅ VERY IMPORTANT
+ 
+ 
+COVER_DIR = "uploads/cover_photos"
+os.makedirs(COVER_DIR, exist_ok=True)
+ 
+ 
+@router.post("/upload-cover")
+async def upload_cover(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    ext = file.filename.split(".")[-1]
+    filename = f"{current_user.id}_{int(datetime.utcnow().timestamp())}.{ext}"
+ 
+# ✅ CLEAN RELATIVE PATH
+    relative_path = f"uploads/cover_photos/{filename}"
+ 
+# ✅ SAVE FILE (correct absolute path)
+    absolute_path = os.path.join("uploads/cover_photos", filename)
+ 
+    with open(absolute_path, "wb") as f:
+      f.write(await file.read())
+ 
+# ✅ SAVE CLEAN PATH IN DB
+    current_user.cover_photo = relative_path
+    db.commit()
+ 
+    return {"cover": relative_path}
+ 

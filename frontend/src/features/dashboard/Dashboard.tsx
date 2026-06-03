@@ -4,15 +4,17 @@ import Navbar from "../../components/layout/Navbar";
 import TaskModal from "../../features/planner/TaskModal";
 import { api } from "../../services/api";
 import { PieChart, Pie, Cell } from "recharts";
-
+ 
 type User = { first_name: string; last_name: string; email?: string };
 type PlannerResponse = { assigned?: any[]; today?: any[]; overdue?: any[]; kanban?: any };
+type Board = { id: string | number; title?: string; name?: string; description?: string };
 type Team = { id: string; name: string; description?: string; type?: string };
-
+ 
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [plannerData, setPlannerData] = useState<PlannerResponse | null>(null);
   const [dashboardCounts, setDashboardCounts] = useState<any | null>(null);
+  const [boards, setBoards] = useState<Board[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamName, setTeamName] = useState("");
   const [teamDesc, setTeamDesc] = useState("");
@@ -20,21 +22,33 @@ export default function Dashboard() {
   const [inviteEmails, setInviteEmails] = useState("");
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+ 
+// ✅ ADD HERE
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(search);
+  }, 300);
+ 
+  return () => clearTimeout(timer);
+}, [search]);
+ 
   const [loading, setLoading] = useState(true);
   const [createError, setCreateError] = useState<string | null>(null);
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const navigate = useNavigate();
-
+ 
   useEffect(() => {
     const loadDashboard = async () => {
       setLoading(true);
       try {
-        const [userRes, plannerRes, teamsRes] = await Promise.all([
+        const [userRes, plannerRes, boardsRes, teamsRes] = await Promise.all([
           api.get("/users/me"),
           api.get("/planner"),
+          api.get("/boards/personal"),
           api.get("/teams"),
         ]);
-
+ 
         setUser(userRes.data);
         setPlannerData(plannerRes.data || {});
         // fetch aggregated counts
@@ -44,6 +58,7 @@ export default function Dashboard() {
         } catch (e) {
           // ignore, planner will be fallback
         }
+        setBoards(boardsRes.data || []);
         setTeams(teamsRes.data || []);
       } catch (err) {
         console.error("Dashboard load failed", err);
@@ -51,29 +66,29 @@ export default function Dashboard() {
         setLoading(false);
       }
     };
-
+ 
     loadDashboard();
   }, []);
-
+ 
   // Refresh planner data on realtime events (card moved/updated)
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
     if (!storedUser || !token) return;
-
+ 
     let parsed;
     try {
       parsed = JSON.parse(storedUser);
     } catch {
       return;
     }
-
+ 
     if (!parsed?.id) return;
-
+ 
     const ws = new WebSocket(
       `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/notifications/${parsed.id}?token=${encodeURIComponent(token)}`
     );
-
+ 
     ws.onmessage = (evt) => {
       try {
         const data = JSON.parse(evt.data);
@@ -85,11 +100,11 @@ export default function Dashboard() {
         // ignore
       }
     };
-
+ 
     ws.onerror = () => {};
     return () => ws.close();
   }, []);
-
+ 
   const tasks = useMemo(() => {
     const items = [
       ...(plannerData?.assigned || []),
@@ -103,37 +118,60 @@ export default function Dashboard() {
     });
     return Array.from(map.values());
   }, [plannerData]);
-
+ 
   const filteredTasks = useMemo(() => {
-    if (!search) return tasks;
-    return tasks.filter((task) => task?.title?.toLowerCase().includes(search.toLowerCase()));
-  }, [search, tasks]);
-
+    if (!debouncedSearch) return tasks;
+    return tasks.filter((task) => task?.title?.toLowerCase().includes(debouncedSearch.toLowerCase()));
+  }, [debouncedSearch, tasks]);
+  const filteredBoards = useMemo(() => {
+  if (!debouncedSearch) return boards;
+  return boards.filter((b) =>
+    (b.title || "")
+      .toLowerCase()
+      .includes(debouncedSearch.toLowerCase())
+  );
+}, [debouncedSearch, boards]);
+ 
+const filteredTeams = useMemo(() => {
+  if (!debouncedSearch) return teams;
+  return teams.filter((t) =>
+    (t.name || "")
+      .toLowerCase()
+      .includes(debouncedSearch.toLowerCase())
+  );
+}, [debouncedSearch, teams]);
+// const unifiedResults = [
+//   ...filteredTeams.map(t => ({ type: "team", ...t })),
+//   ...filteredBoards.map(b => ({ type: "board", ...b })),
+//   ...filteredTasks.map(c => ({ type: "card", ...c })),
+// ];
+ 
   const recentTeams = useMemo(() => teams.slice(-3).reverse(), [teams]);
-
+ 
+  const todayCount = plannerData?.today?.length || 0;
   const completedCount = dashboardCounts?.done ?? plannerData?.kanban?.done?.length ?? 0;
   const inProgressCount = dashboardCounts?.in_progress ?? plannerData?.kanban?.in_progress?.length ?? 0;
   const todoCount = dashboardCounts?.todo ?? plannerData?.kanban?.to_do?.length ?? 0;
   const totalTasks = tasks.length;
   const completedPercent = totalTasks ? Math.round((completedCount / totalTasks) * 100) : 0;
-
+ 
   const analyticsData = [
     { name: "Done", value: completedCount, color: "#2563eb" },
     { name: "In Progress", value: inProgressCount, color: "#3b82f6" },
     { name: "To Do", value: todoCount, color: "#93c5fd" },
   ];
-
+ 
   const teamButtons = (teamId: string) => ({
     projects: () => navigate(`/teams/${teamId}`),
     open: () => navigate(`/teams/${teamId}`),
   });
-
+ 
   const parseInviteEmails = (value: string) =>
     value
       .split(/[,;\s]+/)
       .map((email) => email.trim())
       .filter((email) => email.length);
-
+ 
   const createTeam = async () => {
     setCreateError(null);
     setInviteStatus(null);
@@ -141,7 +179,6 @@ export default function Dashboard() {
       setCreateError("Team name is required");
       return;
     }
-
     try {
       let createRes;
       if (teamImage) {
@@ -158,7 +195,14 @@ export default function Dashboard() {
           type: "private",
         });
       }
-
+ 
+    // try {
+    //   const createRes = await api.post("/teams", {
+    //     name: teamName,
+    //     description: teamDesc,
+    //     type: "private",
+    //   });
+ 
       const createdTeamId = createRes.data?.id;
       if (createdTeamId && inviteEmails.trim()) {
         const emails = parseInviteEmails(inviteEmails);
@@ -167,7 +211,7 @@ export default function Dashboard() {
           setInviteStatus(`${emails.length} invite(s) sent`);
         }
       }
-
+ 
       const teamsRes = await api.get("/teams");
       setTeams(teamsRes.data || []);
       setTeamName("");
@@ -179,16 +223,16 @@ export default function Dashboard() {
       setCreateError(err?.response?.data?.detail || "Unable to create team");
     }
   };
-
+ 
   const formatDate = (value?: string) => {
     if (!value) return "No date";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "No date";
     return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
-
+ 
   const chartValue = `${completedPercent}%`;
-
+ 
   if (loading) {
     return (
       <div style={pageStyle}>
@@ -197,7 +241,7 @@ export default function Dashboard() {
       </div>
     );
   }
-
+ 
   return (
     <div style={pageStyle}>
       <Navbar />
@@ -208,8 +252,87 @@ export default function Dashboard() {
             <h1 style={heroTitle}>Welcome back, {user?.first_name}</h1>
             <p style={heroText}>A clean overview of your task flow and teams.</p>
           </div>
-
+ 
           <div style={heroActions}>
+  <div style={{ position: "relative", width: "100%", maxWidth: 420 }}>
+   
+    <div style={searchStyle}>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search tasks, boards, teams"
+        style={searchInputStyle}
+      />
+    </div>
+    {debouncedSearch && (
+  <div
+    style={{
+      position: "absolute",
+      top: "55px",
+      left: 0,
+      width: "100%",
+      background: "#fff",
+      borderRadius: "10px",
+      border: "1px solid #e5e7eb",
+      boxShadow: "0 8px 25px rgba(0,0,0,0.08)",
+      zIndex: 1000,
+      maxHeight: "300px",
+      overflowY: "auto",
+    }}
+  >
+    {/* ✅ TEAMS */}
+    {filteredTeams.length > 0 && (
+      <>
+        <div style={{ padding: "10px", fontWeight: 600 }}>Teams</div>
+        {filteredTeams.map((t) => (
+          <div
+            key={t.id}
+            style={{ padding: "8px 12px", cursor: "pointer" }}
+            onClick={() => navigate(`/teams/${t.id}`)}
+          >
+            👥 {t.name}
+          </div>
+        ))}
+      </>
+    )}
+ 
+    {/* ✅ BOARDS */}
+    {filteredBoards.length > 0 && (
+      <>
+        <div style={{ padding: "10px", fontWeight: 600 }}>Boards</div>
+        {filteredBoards.map((b) => (
+          <div
+            key={b.id}
+            style={{ padding: "8px 12px", cursor: "pointer" }}
+            onClick={() => navigate(`/boards/${b.id}`)}
+          >
+            📋 {b.title}
+          </div>
+        ))}
+      </>
+    )}
+ 
+    {/* ✅ CARDS */}
+    {filteredTasks.length > 0 && (
+      <>
+        <div style={{ padding: "10px", fontWeight: 600 }}>Cards</div>
+        {filteredTasks.map((task) => (
+          <div
+            key={task.id}
+            style={{ padding: "8px 12px", cursor: "pointer" }}
+            onClick={() => setSelectedTask(task)}
+          >
+            ✅ {task.title}
+          </div>
+        ))}
+      </>
+    )}
+  </div>
+)}
+</div>  
+</div>
+ 
+          {/* <div style={heroActions}>
             <div style={searchStyle}>
               <input
                 value={search}
@@ -218,9 +341,9 @@ export default function Dashboard() {
                 style={searchInputStyle}
               />
             </div>
-          </div>
+          </div> */}
         </section>
-
+ 
         <section style={statsRow}>
           {[
             { label: "Total Tasks", value: totalTasks },
@@ -234,7 +357,7 @@ export default function Dashboard() {
             </div>
           ))}
         </section>
-
+ 
         <section style={mainGrid}>
           <div style={leftColumn}>
             <div style={panelBlock}>
@@ -267,7 +390,7 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-
+ 
             <div style={panelBlock}>
               <div style={sectionTag}>Recent tasks</div>
               <div style={taskListStyle}>
@@ -286,7 +409,46 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
+          {/* <div style={panelBlock}>
+  <div style={sectionTag}>Search Results</div>
+ 
+  {debouncedSearch && (
+    <>
+      <h4>Teams</h4>
+      {filteredTeams.map((t) => (
+        <div
+          key={t.id}
+          style={{ padding: "8px", cursor: "pointer" }}
+          onClick={() => navigate(`/teams/${t.id}`)}
+        >
+          👥 {t.name}
+        </div>
+      ))}
+ 
+      <h4>Boards</h4>
+      {filteredBoards.map((b) => (
+        <div
+          key={b.id}
+          style={{ padding: "8px", cursor: "pointer" }}
+          onClick={() => navigate(`/boards/${b.id}`)}
+        >
+          📋 {b.title}
+        </div>
+      ))}
+      <h4>Cards</h4>
+      {filteredTasks.map((task) => (
+        <div
+          key={task.id}
+          style={{ padding: "8px", cursor: "pointer" }}
+          onClick={() => setSelectedTask(task)}
+        >
+          ✅ {task.title}
+        </div>
+      ))}
+    </>
+  )}
+</div> */}
+ 
           <aside style={sidebarPanel}>
             <div style={sidebarCard}>
               <div style={sectionTag}>Create team</div>
@@ -326,7 +488,7 @@ export default function Dashboard() {
               {createError && <div style={errorText}>{createError}</div>}
               {inviteStatus && <div style={successText}>{inviteStatus}</div>}
             </div>
-
+ 
             <div style={sidebarCard}>
               <div style={sectionTag}>Quick access</div>
               {recentTeams.length ? (
@@ -349,7 +511,7 @@ export default function Dashboard() {
               ) : (
                 <div style={emptyTeams}>No teams yet</div>
               )}
-
+ 
               <button onClick={() => navigate("/teams")} style={viewTeamsButton}>
                 View All Teams
               </button>
@@ -357,7 +519,7 @@ export default function Dashboard() {
           </aside>
         </section>
       </main>
-
+ 
       {selectedTask && (
         <TaskModal
           task={selectedTask}
@@ -371,21 +533,21 @@ export default function Dashboard() {
     </div>
   );
 }
-
+ 
 const pageStyle = {
   width: "100%",
   minHeight: "100vh",
   background: "#ffffff",
   color: "#0f172a",
 };
-
+ 
 const contentStyle = {
   width: "100%",
   maxWidth: "none",
   padding: 20,
   boxSizing: "border-box" as const,
 };
-
+ 
 const heroGrid = {
   display: "flex",
   justifyContent: "space-between",
@@ -393,7 +555,7 @@ const heroGrid = {
   gap: 20,
   marginBottom: 24,
 };
-
+ 
 const captionStyle = {
   textTransform: "uppercase",
   color: "#2563eb",
@@ -402,21 +564,21 @@ const captionStyle = {
   marginBottom: 10,
   fontWeight: 700,
 };
-
+ 
 const heroTitle = {
   fontSize: 34,
   margin: 0,
   color: "#0f172a",
   lineHeight: 1.05,
 };
-
+ 
 const heroText = {
   color: "#475569",
   marginTop: 12,
   maxWidth: 640,
   lineHeight: 1.6,
 };
-
+ 
 const heroActions = {
   display: "flex",
   alignItems: "center",
@@ -424,7 +586,7 @@ const heroActions = {
   flex: 1,
   justifyContent: "flex-end",
 };
-
+ 
 const searchStyle = {
   width: "100%",
   maxWidth: 420,
@@ -433,7 +595,7 @@ const searchStyle = {
   border: "1px solid #e5e7eb",
   padding: "10px 14px",
 };
-
+ 
 const searchInputStyle = {
   width: "100%",
   border: "none",
@@ -442,14 +604,14 @@ const searchInputStyle = {
   color: "#0f172a",
   fontSize: 14,
 };
-
+ 
 const statsRow = {
   display: "grid",
   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
   gap: 20,
   marginBottom: 24,
 };
-
+ 
 const statCardStyle = {
   background: "#f8fafc",
   borderRadius: 10,
@@ -457,7 +619,7 @@ const statCardStyle = {
   border: "1px solid #e5e7eb",
   boxShadow: "0 12px 30px rgba(15, 23, 42, 0.08)",
 };
-
+ 
 const statLabel = {
   color: "#64748b",
   fontSize: 12,
@@ -465,24 +627,24 @@ const statLabel = {
   letterSpacing: "0.12em",
   marginBottom: 10,
 };
-
+ 
 const statValue = {
   fontSize: 28,
   fontWeight: 700,
   color: "#0f172a",
 };
-
+ 
 const mainGrid = {
   display: "grid",
   gridTemplateColumns: "2fr 1fr",
   gap: 20,
 };
-
+ 
 const leftColumn = {
   display: "grid",
   gap: 20,
 };
-
+ 
 const panelBlock = {
   background: "#ffffff",
   borderRadius: 12,
@@ -490,7 +652,7 @@ const panelBlock = {
   border: "1px solid #e5e7eb",
   boxShadow: "0 20px 40px rgba(15, 23, 42, 0.06)",
 };
-
+ 
 const sectionTag = {
   display: "inline-flex",
   padding: "6px 12px",
@@ -502,7 +664,7 @@ const sectionTag = {
   textTransform: "uppercase",
   marginBottom: 18,
 };
-
+ 
 const chartWrapper = {
   position: "relative" as const,
   display: "flex",
@@ -510,7 +672,7 @@ const chartWrapper = {
   justifyContent: "center",
   padding: 18,
 };
-
+ 
 const chartCenter = {
   position: "absolute" as const,
   top: "50%",
@@ -522,13 +684,13 @@ const chartCenter = {
   fontSize: 28,
   fontWeight: 800,
 };
-
+ 
 const legendStyle = {
   display: "grid",
   gap: 12,
   marginTop: 20,
 };
-
+ 
 const legendItem = {
   display: "flex",
   alignItems: "center",
@@ -536,29 +698,29 @@ const legendItem = {
   gap: 12,
   color: "#334155",
 };
-
+ 
 const legendDot = {
   width: 10,
   height: 10,
   borderRadius: "50%",
   display: "inline-block",
 };
-
+ 
 const legendText = {
   color: "#475569",
   fontSize: 14,
 };
-
+ 
 const legendValue = {
   color: "#0f172a",
   fontWeight: 700,
 };
-
+ 
 const taskListStyle = {
   display: "grid",
   gap: 12,
 };
-
+ 
 const taskRow = {
   width: "100%",
   textAlign: "left" as const,
@@ -573,18 +735,18 @@ const taskRow = {
   color: "#0f172a",
   cursor: "pointer",
 };
-
+ 
 const taskTitle = {
   fontSize: 15,
   fontWeight: 700,
 };
-
+ 
 const taskSubtitle = {
   fontSize: 13,
   color: "#64748b",
   marginTop: 6,
 };
-
+ 
 const pill = (status: string) => ({
   padding: "8px 12px",
   borderRadius: 999,
@@ -593,7 +755,7 @@ const pill = (status: string) => ({
   fontSize: 12,
   fontWeight: 700,
 });
-
+ 
 const emptyTasks = {
   color: "#64748b",
   padding: 24,
@@ -601,12 +763,12 @@ const emptyTasks = {
   background: "#f8fafc",
   textAlign: "center" as const,
 };
-
+ 
 const sidebarPanel = {
   display: "grid",
   gap: 20,
 };
-
+ 
 const sidebarCard = {
   background: "#ffffff",
   borderRadius: 12,
@@ -614,7 +776,7 @@ const sidebarCard = {
   border: "1px solid #e5e7eb",
   boxShadow: "0 16px 30px rgba(15, 23, 42, 0.06)",
 };
-
+ 
 const inputStyle = {
   width: "100%",
   borderRadius: 10,
@@ -625,7 +787,7 @@ const inputStyle = {
   padding: "12px 14px",
   marginBottom: 12,
 };
-
+ 
 const buttonPrimary = {
   width: "100%",
   padding: "14px 16px",
@@ -636,7 +798,7 @@ const buttonPrimary = {
   fontWeight: 700,
   cursor: "pointer",
 };
-
+ 
 const teamCard = {
   background: "#f8fafc",
   borderRadius: 12,
@@ -645,24 +807,24 @@ const teamCard = {
   display: "grid",
   gap: 14,
 };
-
+ 
 const teamNameStyle = {
   fontSize: 15,
   fontWeight: 700,
   color: "#0f172a",
 };
-
+ 
 const teamSubtitle = {
   color: "#64748b",
   fontSize: 13,
 };
-
+ 
 const teamActionRow = {
   display: "flex",
   gap: 10,
   flexWrap: "wrap" as const,
 };
-
+ 
 const ghostButton = {
   flex: 1,
   borderRadius: 10,
@@ -672,7 +834,7 @@ const ghostButton = {
   padding: "10px 12px",
   cursor: "pointer",
 };
-
+ 
 const outlineButton = {
   flex: 1,
   borderRadius: 10,
@@ -682,7 +844,7 @@ const outlineButton = {
   padding: "10px 12px",
   cursor: "pointer",
 };
-
+ 
 const emptyTeams = {
   color: "#64748b",
   padding: 22,
@@ -690,7 +852,7 @@ const emptyTeams = {
   background: "#f8fafc",
   textAlign: "center" as const,
 };
-
+ 
 const viewTeamsButton = {
   width: "100%",
   marginTop: 16,
@@ -702,20 +864,22 @@ const viewTeamsButton = {
   fontWeight: 700,
   cursor: "pointer",
 };
-
+ 
 const errorText = {
   color: "#dc2626",
   marginTop: 12,
   fontSize: 13,
 };
-
+ 
 const successText = {
   color: "#16a34a",
   marginTop: 12,
   fontSize: 13,
 };
-
+ 
 const loadingStyle = {
   color: "#475569",
   padding: 40,
 };
+ 
+ 

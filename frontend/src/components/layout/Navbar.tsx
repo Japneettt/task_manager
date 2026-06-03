@@ -1,31 +1,30 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { api, getWebSocketUrl } from "../../services/api";
-
+import { useNavigate, useLocation } from "react-router-dom";
+import { api } from "../../services/api";
+ 
 type User = {
   first_name: string;
   last_name: string;
   email: string;
-  is_admin?: boolean;
+  avatar?: string;
 };
-
+ 
 type Notification = {
   id: string;
   is_read: boolean;
 };
-
+ 
 const Navbar = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
+  const [unreadCount, setUnreadCount] = useState(0); // ✅ NEW
   const navigate = useNavigate();
   const location = useLocation();
-
+ 
   // ✅ INITIALS
-  const getInitials = (first: string, last: string) =>
-    `${first[0]}${last[0]}`.toUpperCase();
-
+  const getInitials = (first: string, last: string) => {
+    return `${first[0]}${last[0]}`.toUpperCase();
+  };
+ 
   // ✅ FETCH USER
   useEffect(() => {
     const fetchUser = async () => {
@@ -37,31 +36,31 @@ const Navbar = () => {
         handleLogout();
       }
     };
-
+ 
     fetchUser();
   }, []);
-
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser || storedUser === "undefined") {
-      setIsAdmin(false);
-      return;
+  const interval = setInterval(() => {
+ 
+    if (localStorage.getItem("refreshUser")) {
+ 
+      api.get("/users/me").then(res => {
+        setUser(res.data);
+        localStorage.removeItem("refreshUser");
+      });
+ 
     }
-
-    try {
-      const parsedUser = JSON.parse(storedUser);
-      setIsAdmin(parsedUser?.is_admin === true);
-    } catch {
-      setIsAdmin(false);
-    }
-  }, []);
-
-  const getDefaultRoute = () => (isAdmin ? "/admin" : "/dashboard");
-
-  // ✅ FETCH NOTIFICATIONS
+ 
+  }, 1000);
+ 
+  return () => clearInterval(interval);
+}, []);
+  const goToProfile = () => navigate("/profile");
+ 
+  // ✅ FETCH NOTIFICATION COUNT
   const fetchNotifications = async () => {
     try {
-      const res = await api.get("/notifications");
+      const res = await api.get("/notifications"); // ✅ use correct endpoint
       const unread = res.data.filter(
         (n: Notification) => !n.is_read
       );
@@ -70,61 +69,27 @@ const Navbar = () => {
       console.error("Error fetching notifications", err);
     }
   };
-
+ 
+  // useEffect(() => {
+  //   fetchNotifications();
+  // }, []);
   useEffect(() => {
     fetchNotifications();
+ 
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 5000);
+ 
+    return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      return;
-    }
-
-    let parsedUser;
-    try {
-      parsedUser = JSON.parse(storedUser);
-    } catch {
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    if (!parsedUser?.id || !token) {
-      return;
-    }
-
-    const ws = new WebSocket(
-      getWebSocketUrl(
-        `/ws/notifications/${parsedUser.id}?token=${encodeURIComponent(token)}`
-      )
-    );
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "NEW_INVITE" || data.type === "NEW_NOTIFICATION") {
-          fetchNotifications();
-        }
-      } catch (err) {
-        console.error("WebSocket message parse error", err);
-      }
-    };
-
-    ws.onerror = (event) => {
-      console.warn("WebSocket error", event);
-    };
-
-    return () => ws.close();
-  }, []);
-
+ 
   // ✅ LOGOUT
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
     localStorage.removeItem("isLoggedIn");
     navigate("/");
   };
-
+ 
   // ✅ ACTIVE STYLE
   const activeStyle = (path: string) => ({
     cursor: "pointer",
@@ -132,7 +97,7 @@ const Navbar = () => {
     fontWeight: location.pathname === path ? 600 : 400,
     position: "relative" as const,
   });
-
+ 
   return (
     <div
       style={{
@@ -146,38 +111,29 @@ const Navbar = () => {
       }}
     >
       {/* ✅ LOGO */}
-      <h5
-        style={{ cursor: "pointer" }}
-        onClick={() => navigate(getDefaultRoute())}
-      >
+      <h5 style={{ cursor: "pointer" }} onClick={() => navigate("/dashboard")}>
         TaskFlow
       </h5>
-
-      {/* ✅ NAV LINKS */}
+ 
+      {/* ✅ NAV */}
       <div style={{ display: "flex", gap: "30px" }}>
         {/* Dashboard */}
         <span
-          style={activeStyle(getDefaultRoute())}
-          onClick={() => navigate(getDefaultRoute())}
+          style={activeStyle("/dashboard")}
+          onClick={() => navigate("/dashboard")}
         >
           Dashboard
         </span>
-
-        {isAdmin && (
-          <span
-            style={activeStyle("/admin")}
-            onClick={() => navigate("/admin")}
-          >
-            Admin Panel
-          </span>
-        )}
-
+ 
         {/* Boards */}
-        <Link to="/boards" style={activeStyle("/boards") as any}>
+        <span
+          style={activeStyle("/boards")}
+          onClick={() => navigate("/boards")}
+        >
           Boards
-        </Link>
-
-        {/* ✅ Inbox with badge */}
+        </span>
+ 
+        {/* ✅ Inbox with Badge */}
         <span
           style={activeStyle("/inbox")}
           onClick={() => navigate("/inbox")}
@@ -200,16 +156,12 @@ const Navbar = () => {
             </span>
           )}
         </span>
-
-        {/* ✅ FIXED Planner */}
-        <span
-          style={activeStyle("/planner")}
-          onClick={() => navigate("/planner")}
-        >
+ 
+ 
+        <span onClick={() => navigate("/planner")}>
           Planner
         </span>
-
-        {/* ✅ FIXED Activity */}
+ 
         <span
           style={activeStyle("/activity")}
           onClick={() => navigate("/activity")}
@@ -217,39 +169,72 @@ const Navbar = () => {
           Activity
         </span>
       </div>
-
-      {/* ✅ PROFILE SECTION */}
+ 
+      {/* ✅ PROFILE */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        {/* Avatar */}
+ 
+        {/* ✅ CLICKABLE AREA */}
         <div
+          onClick={goToProfile}
           style={{
-            width: "35px",
-            height: "35px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-            color: "#fff",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 600,
+            gap: "10px",
+            cursor: "pointer"
           }}
         >
-          {user ? getInitials(user.first_name, user.last_name) : ".."}
-        </div>
-
-        {/* User Info */}
-        <div>
+ 
+          {/* ✅ AVATAR */}
+          <div
+            style={{
+              width: "35px",
+              height: "35px",
+              borderRadius: "50%",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#ddd",
+              fontWeight: 600,
+              color: "#fff"
+            }}
+ 
+          >
+ 
+            {user?.avatar ? (
+              <img
+                src={`http://localhost:8000/${user.avatar}`}
+                alt="avatar"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              <span>
+                {user ? getInitials(user.first_name, user.last_name) : ".."}
+              </span>
+            )}
+ 
+            {/* {user ? getInitials(user.first_name, user.last_name) : ".."} */}
+          </div>
+ 
+          {/* ✅ USER INFO */}
           <div>
-            {user
-              ? `${user.first_name} ${user.last_name}`
-              : "Loading..."}
+            <div>
+              {user
+                ? `${user.first_name} ${user.last_name}`
+                : "Loading..."}
+            </div>
+            <div style={{ fontSize: "12px", color: "#6b7280" }}>
+              {user?.email}
+            </div>
           </div>
-          <div style={{ fontSize: "12px", color: "#6b7280" }}>
-            {user?.email}
-          </div>
+ 
         </div>
-
-        {/* Logout */}
+ 
+        {/* ✅ LOGOUT (SEPARATE CLICK) */}
         <span
           onClick={handleLogout}
           style={{
@@ -260,10 +245,12 @@ const Navbar = () => {
         >
           Logout
         </span>
+ 
       </div>
     </div>
   );
 };
-
+ 
 export default Navbar;
+ 
 

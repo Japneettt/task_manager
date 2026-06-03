@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.security import decode_token
 from app.websocket.manager import manager
+from datetime import datetime
 
 app = FastAPI(
     title="Backend Trello",
@@ -25,6 +26,8 @@ app.mount(
     StaticFiles(directory=BASE_DIR / "static"),
     name="static"
 )
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 # Ensure all model tables exist in the database at startup.
