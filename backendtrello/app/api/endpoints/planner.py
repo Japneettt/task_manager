@@ -102,11 +102,19 @@ def serialize_card(card: Card, db: Session):
             completed_at = card.completed_at.isoformat()
         except Exception:
             completed_at = str(card.completed_at)
+            
+    created_at = None
+    if card.created_at:
+        try:
+           created_at = card.created_at.isoformat()
+        except Exception:
+           created_at = str(card.created_at)
 
     return {
         "id": str(card.id),
         "title": card.title,
         "description": card.description,
+        "created_at": created_at,   # ✅ ✅ THIS LINE FIXES EVERYTHING
         "due_date": due_date,
         "completed_at": completed_at,
         "assigned_to": str(card.assigned_to) if card.assigned_to else None,

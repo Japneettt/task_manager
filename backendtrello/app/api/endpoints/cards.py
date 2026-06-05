@@ -122,7 +122,8 @@ def create_card(
         list_id=list_id,
         board_id=lst.board_id,
         assigned_to=card_assigned,
-        due_date=str(card_due_date) if card_due_date else None ,  # ✅ FIXED
+        due_date = card_due_date.isoformat() if card_due_date else None,
+        # due_date=str(card_due_date) if card_due_date else None ,  # ✅ FIXED
         priority=card_priority,
         badge=card_badge  # ✅ NEW: Add badge
     )
@@ -188,7 +189,8 @@ def update_card(card_id: UUID, data: CardCreate, db: Session = Depends(get_db)):
     card.position = data.position
     card.priority = data.priority
     card.badge = data.badge  # ✅ NEW: Update badge
-    card.due_date = data.due_date
+    card.due_date = data.due_date.isoformat() if data.due_date else None
+    # card.due_date = data.due_date
     
         # Handle assigned_to if provided
     if data.assigned_to:

@@ -65,7 +65,8 @@ def _create_team(
     member = TeamMember(
         team_id=team.id,
         user_id=current_user.id,
-        role="admin"
+        # role="admin"
+        role="owner"   # ✅ CHANGE HERE
     )
     db.add(member)
     db.commit()
@@ -441,7 +442,9 @@ def get_team(
                 "id": str(user.id),
                 "name": f"{user.first_name} {user.last_name}",
                 "email": user.email,
-                "role": m.role
+                "role": "owner" if user.id == team.owner_id else m.role,  # ✅ FIX HERE
+                # "role": m.role,
+                "avatar": user.avatar   # ✅ ADD THIS LINE
             })
 
     # ✅ FIXED INVITES (IMPORTANT 🔥)

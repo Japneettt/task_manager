@@ -23,6 +23,8 @@ import AdminLayout from "./features/admin/AdminLayout";
 import AdminDashboard from "./features/admin/AdminDashboard";
 import TeamManagement from "./features/admin/TeamManagement";
 import UserInsights from "./features/admin/UserInsights";
+import Navbar from "./components/layout/Navbar"
+// ✅ adjust path if needed
 /**
  * ✅ TEMP AUTH CHECK
  */
@@ -64,6 +66,7 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
 function App() {
   return (
     <BrowserRouter>
+    
       <Routes>
 
         <Route

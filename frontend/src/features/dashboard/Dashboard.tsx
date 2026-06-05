@@ -23,7 +23,6 @@ export default function Dashboard() {
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  
 // ✅ ADD HERE
 useEffect(() => {
   const timer = setTimeout(() => {

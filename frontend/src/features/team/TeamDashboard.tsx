@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../services/api";
 import AddList from "../../features/board/AddList";
 import AddCard from "../../features/board/AddCard";
-
+import Navbar from "../../components/layout/Navbar";
 import {
   DragDropContext,
   Droppable,
@@ -17,8 +17,9 @@ const TeamDashboard = () => {
   const [boards, setBoards] = useState<any[]>([]);
   const [title, setTitle] = useState("");
   const [openBoard, setOpenBoard] = useState<any>(null);
-
-  // ✅ FETCH DATA
+  const [showInviteModal, setShowInviteModal] = useState(false);
+const [inviteEmails, setInviteEmails] = useState<string[]>([]);
+const [inviteInput, setInviteInput] = useState("");
   const fetchData = async () => {
     try {
       const teamRes = await api.get(`/teams/${id}`);
@@ -27,174 +28,460 @@ const TeamDashboard = () => {
       const boardsRes = await api.get(`/boards/teams/${id}/boards`);
       setBoards(boardsRes.data);
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error(err);
     }
   };
+
   useEffect(() => {
     fetchData();
-
-    const interval = setInterval(() => {
-      fetchData();
-    }, 5000);
-
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
-  useEffect(() => {
-  if (team) {
-    console.log("TEAM IMAGE URL:", team.image_url);
-  }
-}, [team]);
-  // ✅ ✅ WEBSOCKET + INITIAL LOAD
-  // useEffect(() => {
-  //   fetchData();
 
-  //   const userData = localStorage.getItem("user");
-
-  //   if (!userData || userData === "undefined") return;
-
-  //   let user;
-  //   try {
-  //     user = JSON.parse(userData);
-  //   } catch {
-  //     return;
-  //   }
-
-  //   if (!user?.id) return;
-
-  //   const ws = new WebSocket(`ws://localhost:8000/ws/activity/${user.id}`);
-
-  //   ws.onmessage = () => {
-  //     fetchData(); // ✅ realtime update
-  //   };
-
-  //   return () => ws.close();
-  // }, []);
-
-  // ✅ CREATE BOARD
   const createBoard = async () => {
     if (!title) return;
 
     await api.post("/boards/", {
-      title: title,
+      title,
       team_id: id
     });
 
     setTitle("");
     fetchData();
   };
+  const addEmail = () => {
+  if (!inviteInput) return;
+  setInviteEmails([...inviteEmails, inviteInput]);
+  setInviteInput("");
+};
+
+const sendInvite = async () => {
+  if (inviteEmails.length === 0) {
+    alert("Add at least one email ❗");
+    return;
+  }
+
+  try {
+    await api.post(`/teams/${id}/invite`, {
+      emails: inviteEmails,
+    });
+
+    alert("Invite sent ✅");
+
+    // ✅ RESET
+    setInviteEmails([]);
+    setInviteInput("");
+    setShowInviteModal(false);
+
+    // ✅ REFRESH TEAM DATA
+    fetchData();
+  } catch (err) {
+    console.error(err);
+    alert("Failed ❌");
+  }
+};
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2 style={{ color: "#4f46e5" }}>{team?.name}</h2>
-      {/* ✅ TEAM IMAGE */}
+    <div
+      style={{
+        background: "#f8fafc",
+        minHeight: "100vh",
+        padding: "20px 30px",
+      }}
+    >
+      <Navbar />
+      <div style={{ padding: "20px 30px" }}>
+      {/* ✅ TEAM HEADER */}
       <div
         style={{
-          width: "100%",
-          height: "180px",
-          borderRadius: "12px",
-          marginTop: "15px",
-          marginBottom: "20px",
-          // backgroundImage: `url(${team?.image_url ||
-          //   "https://source.unsplash.com/800x600/?abstract,team"
-          //   })`,
-          backgroundImage: `url(${
-  team?.image_url
-    ? `http://localhost:8000${team.image_url}`
-    : "https://source.unsplash.com/800x600/?abstract,team"
-})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          background: "white",
+          borderRadius: "16px",
+          overflow: "hidden",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
         }}
-      />
-      {/* ✅ MEMBERS */}
-      {team && (
-        <>
-          <h4>Members</h4>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            {team.members?.map((m: any) => (
-              <div
-                key={m.id}
-                style={{
-                  background: "#e0e7ff",
-                  padding: "8px 12px",
-                  borderRadius: "20px"
-                }}
-              >
-                {m.name}
-              </div>
-            ))}
-          </div>
-
-          <h4>Pending Invites</h4>
-          {team.invites?.length === 0 && <p>No pending invites</p>}
-          {team.invites?.map((i: any, index: number) => (
-            <div key={index}>📩 {i.email}</div>
-          ))}
-        </>
-      )}
-
-      {/* ✅ CREATE BOARD */}
-      <h4>Create Board</h4>
-      <div style={{ display: "flex", gap: "10px" }}>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Board name"
-        />
-        <button onClick={createBoard}>Create</button>
-      </div>
-
-      {/* ✅ BOARDS */}
-      <h4>Boards</h4>
-      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-        {boards.map((b) => (
-          <div
-            key={b.id}
-            onClick={async () => {
-              const res = await api.get(`/boards/${b.id}`);
-              setOpenBoard(res.data);
-            }}
-            style={{
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              color: "white",
-              padding: "20px",
-              borderRadius: "10px",
-              cursor: "pointer",
-              width: "200px",
-            }}
-          >
-            {b.title}
-          </div>
-        ))}
-      </div>
-
-      {/* ✅ MODAL */}
-      {openBoard && (
+      >
+        {/* ✅ COVER IMAGE (FIXED) */}
         <div
           style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.5)",
+            height: "200px",
+            backgroundImage: `url(${
+              team?.image_url
+                ? `http://localhost:8000${team.image_url}`
+                : "https://source.unsplash.com/1200x400/?team,work"
+            })`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        />
+
+        <div style={{ padding: "20px 30px" }}>
+          <h2 style={{ margin: 0 }}>{team?.name}</h2>
+        </div>
+      </div>
+
+      {/* ✅ MEMBERS + INVITES */}
+      {/* ✅ MEMBERS + INVITES PREMIUM UI */}
+<div
+  style={{
+    display: "flex",
+    gap: "20px",
+    marginTop: "25px",
+  }}
+>
+  {/* ✅ MEMBERS */}
+  <div
+    style={{
+      flex: 1,
+      background: "rgba(255,255,255,0.7)",
+      backdropFilter: "blur(12px)",
+      padding: "20px",
+      borderRadius: "16px",
+      boxShadow: "0 8px 30px rgba(0,0,0,0.08)",
+    }}
+  >
+    {/* HEADER */}
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "15px",
+      }}
+    >
+      <h4 style={{ margin: 0 }}>Members</h4>
+
+      {/* ✅ ADD MEMBER BUTTON */}
+      <button
+  onClick={() => setShowInviteModal(true)}
+  style={{
+    background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+    border: "none",
+    color: "white",
+    padding: "6px 12px",
+    borderRadius: "8px",
+    cursor: "pointer",
+  }}
+>
+  + Add
+</button>
+    </div>
+
+    {/* LIST */}
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {team?.members?.map((m: any) => (
+        
+        <div
+          key={m.id}
+          style={{
             display: "flex",
-            justifyContent: "center",
-            alignItems: "center"
+            alignItems: "center",
+            gap: "12px",
+            padding: "10px",
+            borderRadius: "10px",
+            background: "rgba(255,255,255,0.6)",
+            transition: "0.25s",
+            cursor: "pointer",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget;
+            el.style.transform = "translateY(-3px)";
+            el.style.boxShadow = "0 8px 20px rgba(99,102,241,0.2)";
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget;
+            el.style.transform = "none";
+            el.style.boxShadow = "none";
           }}
         >
           <div
             style={{
-              background: "#fff",
-              padding: "20px",
-              width: "90%",
-              height: "80%",
-              overflow: "auto",
-              borderRadius: "10px"
+              width: "42px",
+              height: "42px",
+              borderRadius: "50%",
+              overflow: "hidden",
+              background: "#ddd",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 600,
+              color: "#fff",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <h2>{team?.name} → {openBoard.title}</h2>
+            {m.avatar ? (
+  <img
+    src={`http://localhost:8000/${m.avatar}`}
+    alt="avatar"
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    }}
+  />
+) : (
+  <span>
+    {m.name
+      ?.split(" ")
+      .map((x: string) => x[0])
+      .join("")
+      .toUpperCase()}
+  </span>
+)}
+            
+          </div>
+
+          {/* ✅ INFO */}
+          {/* <div>
+            <div style={{ fontWeight: 600 }}>{m.name}</div>
+            <div style={{ fontSize: "12px", color: "#6b7280" }}>
+              {m.email}
+            </div>
+          </div> */}
+          <div style={{ flex: 1 }}>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",  // ✅ key change
+      alignItems: "center"
+    }}
+  >
+    {/* LEFT: NAME */}
+    <div style={{ fontWeight: 600 }}>{m.name}</div>
+
+    {/* RIGHT: ROLE BADGE ✅ */}
+    <div
+      style={{
+        fontSize: "11px",
+        padding: "4px 10px",
+        borderRadius: "12px",
+        fontWeight: 600,
+        background:
+          m.role === "owner"
+            ? "#fff3cd"
+            : m.role === "admin"
+            ? "#d4edda"
+            : "#e3f2fd",
+        color:
+          m.role === "owner"
+            ? "#85040a"
+            : m.role === "admin"
+            ? "#155724"
+            : "#0d47a1",
+      }}
+    >
+      {m.role?.toUpperCase()}
+    </div>
+  </div>
+
+  {/* EMAIL BELOW */}
+  <div style={{ fontSize: "12px", color: "#6b7280" }}>
+    {m.email}
+  </div>
+</div>
+        </div>
+        
+      ))}
+    </div>
+  </div>
+
+  {/* ✅ INVITES */}
+  <div
+    style={{
+      flex: 1,
+      background: "rgba(255,255,255,0.7)",
+      backdropFilter: "blur(12px)",
+      padding: "20px",
+      borderRadius: "16px",
+      boxShadow: "0 8px 30px rgba(0,0,0,0.08)",
+    }}
+  >
+    <h4>Pending Invites</h4>
+    {team?.invites?.length === 0 && (
+  <div
+    style={{
+      height: "200px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      textAlign: "center",
+      color: "#9ca3af",
+    }}
+  >
+    {/* ICON */}
+    <div
+      style={{
+        width: "60px",
+        height: "60px",
+        borderRadius: "50%",
+        background: "#eef2ff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "24px",
+        marginBottom: "10px",
+      }}
+    >
+      📩
+    </div>
+
+    {/* TEXT */}
+    <div style={{ fontWeight: 600, color: "#374151" }}>
+      No pending invites
+    </div>
+
+    <div style={{ fontSize: "13px" }}>
+      Invite your team members to collaborate
+    </div>
+  </div>
+)}
+
+    {/* {team?.invites?.length === 0 && <p>No invites</p>} */}
+
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {team?.invites?.map((i: any, index: number) => (
+        <div
+          key={index}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "10px",
+            borderRadius: "10px",
+            background: "rgba(255,255,255,0.6)",
+          }}
+        >
+          {/* ✅ AVATAR PLACEHOLDER */}
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              background: "#e5e7eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 600,
+            }}
+          >
+            📩
+          </div>
+
+          {/* INFO */}
+          <div>
+            <div style={{ fontWeight: 500 }}>{i.email}</div>
+            <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+              Invitation Pending
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
+      {/* ✅ CREATE BOARD */}
+      <div
+        style={{
+          background: "white",
+          marginTop: "25px",
+          padding: "20px",
+          borderRadius: "14px",
+          boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+        }}
+      >
+        <h4>Create Board</h4>
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter board name..."
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid #ddd",
+            }}
+          />
+
+          <button
+            onClick={createBoard}
+            style={{
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              border: "none",
+              color: "white",
+              padding: "10px 18px",
+              borderRadius: "8px",
+              cursor: "pointer",
+            }}
+          >
+            Create
+          </button>
+        </div>
+      </div>
+
+      {/* ✅ BOARDS */}
+      <div style={{ marginTop: "30px" }}>
+        <h3>Boards</h3>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fill, minmax(220px, 1fr))",
+            gap: "20px",
+          }}
+        >
+          {boards.map((b) => (
+            <div
+              key={b.id}
+              onClick={async () => {
+                const res = await api.get(`/boards/${b.id}`);
+                setOpenBoard(res.data);
+              }}
+              style={{
+                padding: "25px",
+                borderRadius: "14px",
+                color: "white",
+                cursor: "pointer",
+                background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                boxShadow: "0 8px 20px rgba(99,102,241,0.3)",
+              }}
+            >
+              <h4>{b.title}</h4>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ✅ BOARD MODAL */}
+      {openBoard && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              width: "92%",
+              height: "85%",
+              background: "#f9fafb",
+              borderRadius: "14px",
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <h2>{openBoard.title}</h2>
               <button onClick={() => setOpenBoard(null)}>❌</button>
             </div>
 
@@ -205,15 +492,15 @@ const TeamDashboard = () => {
                 await api.patch(`/cards/${result.draggableId}/move`, null, {
                   params: {
                     list_id: result.destination.droppableId,
-                    position: result.destination.index
-                  }
+                    position: result.destination.index,
+                  },
                 });
 
                 const res = await api.get(`/boards/${openBoard.id}`);
                 setOpenBoard(res.data);
               }}
             >
-              <div style={{ display: "flex", gap: "20px" }}>
+              <div style={{ display: "flex", gap: "20px", overflowX: "auto" }}>
                 {openBoard.lists.map((list: any) => (
                   <Droppable key={list.id} droppableId={list.id.toString()}>
                     {(provided) => (
@@ -221,10 +508,10 @@ const TeamDashboard = () => {
                         ref={provided.innerRef}
                         {...provided.droppableProps}
                         style={{
-                          background: "#f4f5f7",
-                          padding: "10px",
-                          borderRadius: "8px",
-                          width: "250px"
+                          background: "white",
+                          padding: "15px",
+                          borderRadius: "10px",
+                          minWidth: "250px",
                         }}
                       >
                         <h4>{list.title}</h4>
@@ -238,23 +525,17 @@ const TeamDashboard = () => {
                             {(provided) => (
                               <div
                                 ref={provided.innerRef}
-                                {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                {...provided.draggableProps}
                                 style={{
-                                  background: "#fff",
+                                  background: "#f1f5f9",
                                   padding: "10px",
-                                  margin: "8px 0",
-                                  borderRadius: "6px",
-                                  ...provided.draggableProps.style
+                                  borderRadius: "8px",
+                                  marginBottom: "10px",
+                                  ...provided.draggableProps.style,
                                 }}
                               >
                                 <b>{card.title}</b>
-
-                                {card.description && (
-                                  <div style={{ fontSize: "12px" }}>
-                                    {card.description}
-                                  </div>
-                                )}
 
                                 {card.due_date && (
                                   <div style={{ fontSize: "12px", color: "red" }}>
@@ -288,6 +569,113 @@ const TeamDashboard = () => {
           </div>
         </div>
       )}
+    </div>
+    {showInviteModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+    }}
+  >
+    <div
+      style={{
+        width: "400px",
+        background: "white",
+        padding: "25px",
+        borderRadius: "14px",
+      }}
+    >
+      <h3>Invite Members 👥</h3>
+
+      {/* INPUT */}
+      <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+        <input
+          value={inviteInput}
+          onChange={(e) => setInviteInput(e.target.value)}
+          placeholder="Enter email"
+          style={{
+            flex: 1,
+            padding: "10px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+          }}
+        />
+
+        <button
+          onClick={addEmail}
+          style={{
+            background: "#6366f1",
+            color: "white",
+            border: "none",
+            padding: "8px 12px",
+            borderRadius: "8px",
+            cursor: "pointer",
+          }}
+        >
+          Add
+        </button>
+      </div>
+
+      {/* EMAIL LIST */}
+      <div style={{ marginTop: "15px" }}>
+        {inviteEmails.map((e, i) => (
+          <div
+            key={i}
+            style={{
+              background: "#f1f5f9",
+              padding: "8px",
+              borderRadius: "6px",
+              marginBottom: "5px",
+            }}
+          >
+            {e}
+          </div>
+        ))}
+      </div>
+
+      {/* ACTIONS */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "10px",
+          marginTop: "20px",
+        }}
+      >
+        <button
+          onClick={() => setShowInviteModal(false)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={sendInvite}
+          style={{
+            background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+            color: "white",
+            padding: "8px 14px",
+            borderRadius: "8px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Send Invite
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
