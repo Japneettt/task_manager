@@ -57,9 +57,14 @@ const ProfilePage = () => {
 };
 
   const updateProfile = async () => {
+    console.log("SENDING DATA →", user);   // ✅ DEBUG
     await api.put("/users/me", {
       first_name: user.first_name,
       last_name: user.last_name,
+      
+gender: user.gender || null,
+  professional_role: user.professional_role || null,
+
     });
 
     alert("Profile updated ✅");
@@ -180,6 +185,43 @@ const ProfilePage = () => {
               <label>Secondary Email</label>
               <input placeholder="Add recovery email" />
             </div>
+
+            {/* GENDER */}
+<div>
+  <label>Gender (Optional)</label>
+  <select
+    value={user.gender || ""}
+    onChange={(e) =>
+      setUser({ ...user, gender: e.target.value })
+    }
+  >
+    <option value="">Select Gender</option>
+    <option value="male">Male</option>
+    <option value="female">Female</option>
+  </select>
+</div>
+
+{/* PROFESSIONAL ROLE */}
+<div>
+  <label>Professional Role (Optional)</label>
+  <select
+    value={user.professional_role || ""}
+    onChange={(e) =>
+      setUser({ ...user, professional_role: e.target.value })
+    }
+  >
+    <option value="">Select Role</option>
+    <option value="developer">Developer</option>
+    <option value="data_scientist">Data Scientist</option>
+    <option value="engineer">Engineer</option>
+    <option value="ui_ux_designer">UI/UX Designer</option>
+    <option value="project_manager">Project Manager</option>
+    <option value="business_analyst">Business Analyst</option>
+    <option value="student">Student</option>
+    <option value="researcher">Researcher</option>
+    <option value="operations_manager">Operations Manager</option>
+  </select>
+</div>
 
           </div>
 
@@ -306,6 +348,21 @@ input {
   margin-top:5px;
   outline:none;
   transition:0.2s;
+}
+  select {
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #d1d5db;
+  margin-top:5px;
+  outline:none;
+  transition:0.2s;
+  background:white;
+}
+
+select:focus {
+  border-color:#6366f1;
+  box-shadow:0 0 0 3px rgba(99,102,241,0.2);
 }
 
 /* BLUE FOCUS */

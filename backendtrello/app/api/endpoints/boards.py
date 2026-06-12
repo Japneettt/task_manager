@@ -61,25 +61,7 @@ def create_board(
     db.commit()
 
     return board
-    # return {
-    #     "id": str(board.id),
-    #     "title": board.title,
-    #     "owner_id": str(board.owner_id),
-    #     "team_id": str(board.team_id) if board.team_id else None
-    # }
 
-
-
-# @router.get("/")
-# def get_boards(
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_user),
-# ):
-#     boards = db.query(Board).filter(
-#         Board.owner_id == current_user.id
-#     ).all()
-
-#     return {"boards": boards}
 @router.get("/personal")
 def get_personal_boards(
     db: Session = Depends(get_db),

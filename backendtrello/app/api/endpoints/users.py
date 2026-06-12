@@ -5,6 +5,7 @@ from uuid import UUID
 from datetime import datetime
 from app.core.database import get_db
 from app.models.user import User
+from app.models.user_query import UserQuery
 from app.schemas.user import UserRead, UserUpdate, ChangePassword
 from app.core.security import verify_password, hash_password, get_current_token
 
@@ -57,6 +58,10 @@ def get_me(
         ),
         avatar=current_user.avatar,
         cover_photo=current_user.cover_photo,
+        
+        gender=current_user.gender,                       # ✅ ADD THIS
+        professional_role=current_user.professional_role, # ✅ ADD THIS
+
     )
 
 
@@ -70,6 +75,11 @@ def update_me(
         current_user.first_name = data.first_name
     if data.last_name:
         current_user.last_name = data.last_name
+    if data.gender is not None:
+        current_user.gender = data.gender
+
+    if data.professional_role is not None:
+        current_user.professional_role = data.professional_role
 
     db.commit()
     db.refresh(current_user)
@@ -88,6 +98,10 @@ def update_me(
         ),
         avatar=current_user.avatar,
         cover_photo=current_user.cover_photo,
+        
+gender=current_user.gender,              # ✅ NEW
+    professional_role=current_user.professional_role,  # ✅ NEW
+
     )
 
 
@@ -168,3 +182,25 @@ async def upload_cover(
     db.commit()
 
     return {"cover": relative_path}
+
+# ✅ USER QUERY API
+
+
+@router.post("/query")
+def submit_query(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not data.get("message"):
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    query = UserQuery(
+        user_id=current_user.id,
+        message=data.get("message")
+    )
+
+    db.add(query)
+    db.commit()
+
+    return {"message": "Query sent successfully ✅"}

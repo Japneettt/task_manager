@@ -24,7 +24,7 @@ class CardRead(BaseModel):
     priority: Optional[str]
     due_date: Optional[datetime]
     badge: Optional[str]  # ✅ Custom badge/status
-    created_at: Optional[datetime]
+
 
     class Config:
         from_attributes = True

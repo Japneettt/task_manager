@@ -23,7 +23,10 @@ import AdminLayout from "./features/admin/AdminLayout";
 import AdminDashboard from "./features/admin/AdminDashboard";
 import TeamManagement from "./features/admin/TeamManagement";
 import UserInsights from "./features/admin/UserInsights";
-import Navbar from "./components/layout/Navbar"
+import HelpPage from "./features/pages/HelpPage";
+import FaqPage from "./features/pages/FaqPage";
+import ChangePasswordPage from "./features/pages/ChangePassword";
+import UserQueries from "./features/admin/UserQueries";
 // ✅ adjust path if needed
 /**
  * ✅ TEMP AUTH CHECK
@@ -152,6 +155,23 @@ function App() {
             </PublicRoute>
           }
         />
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePasswordPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/faq"
+          element={
+            <ProtectedRoute>
+              <FaqPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/help" element={<HelpPage />} />
 
 
         <Route path="/teams/create" element={<CreateTeam />} /><Route path="/teams/:id/invite" element={<InviteMembers />} /><Route path="/teams/:id" element={<TeamDashboard />} />
@@ -164,9 +184,11 @@ function App() {
             </AdminRoute>
           }
         >
+           
           <Route index element={<AdminDashboard />} />
           <Route path="teams" element={<TeamManagement />} />
           <Route path="users" element={<UserInsights />} />
+          <Route path="queries" element={<UserQueries />} />
         </Route>
 
         {/* ✅ FALLBACK */}

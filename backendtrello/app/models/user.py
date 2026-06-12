@@ -25,3 +25,5 @@ class User(Base):
     is_admin = Column(Boolean, default=False) 
     avatar = Column(String, nullable=True)
     cover_photo = Column(String, nullable=True)
+    gender = Column(String, nullable=True)              # ✅ NEW
+    professional_role = Column(String, nullable=True)   # ✅ NEW

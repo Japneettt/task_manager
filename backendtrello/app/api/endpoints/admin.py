@@ -14,6 +14,7 @@ from app.models.card import Card
 from app.models.boards import Board
 from app.models.team_member import TeamMember
 from app.models.team_invite import TeamInvite
+from app.models.user_query import UserQuery
 router = APIRouter()
 @router.get("/dashboard")
 def dashboard(db: Session = Depends(get_db), admin=Depends(get_admin)):
@@ -413,6 +414,30 @@ def admin_tasks(
         })
 
     return out
+
+from app.models.user_query import UserQuery
+from app.models.user import User
+
+@router.get("/queries")
+def get_queries(
+    db: Session = Depends(get_db),
+    admin=Depends(get_admin)
+):
+    queries = db.query(UserQuery).order_by(UserQuery.created_at.desc()).all()
+
+    result = []
+
+    for q in queries:
+        user = db.query(User).filter(User.id == q.user_id).first()
+
+        result.append({
+            "id": str(q.id),
+            "message": q.message,
+            "created_at": q.created_at,
+            "user": user.email if user else "Unknown"
+        })
+
+    return result
 # @router.get("/tasks")
 # def admin_tasks(db: Session = Depends(get_db), admin=Depends(get_admin), status: str = "all", team_id: str = "all"):
 #     q = db.query(Card)

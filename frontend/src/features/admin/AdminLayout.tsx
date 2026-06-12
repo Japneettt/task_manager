@@ -14,6 +14,7 @@ const AdminLayout = () => {
     { icon: "📊", label: "Dashboard", path: "/admin" },
     { icon: "👥", label: "Teams", path: "/admin/teams" },
     { icon: "👤", label: "Users", path: "/admin/users" },
+    { icon: "❓", label: "User Queries", path: "/admin/queries" },
   ];
 
   const sidebarWidth = collapsed ? "70px" : "220px";

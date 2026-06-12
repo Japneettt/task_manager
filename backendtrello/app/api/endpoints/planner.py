@@ -1,53 +1,7 @@
-# from fastapi import APIRouter, Depends
-# from sqlalchemy.orm import Session
-# from datetime import date
-# from app.core.database import get_db
-# from app.models.user import User
-# from app.models.card import Card
-# from datetime import datetime
-# from app.api.endpoints.users import get_current_user
-# from datetime import datetime
-# router = APIRouter()
-# @router.get("/planner")
-# def get_planner_data(
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_user)
-# ):
-#     today = date.today()
-
-#     cards = db.query(Card).filter(
-#         Card.assigned_to == current_user.id
-#     ).all()
-#     # cards = db.query(Card).all()
-
-#     assigned = []
-#     overdue = []
-#     today_tasks = []
-
-#     for c in cards:
-#         if not c.due_date:
-#             continue
-
-#         try:
-#             # ✅ FIX: convert string → date
-#             due = datetime.fromisoformat(c.due_date).date()
-#         except:
-#             continue
-
-#         if due == today:
-#             today_tasks.append(c)
-#         elif due < today:
-#             overdue.append(c)
-#         else:
-#             assigned.append(c)
-
-#     return {
-#         "assigned": assigned,
-#         "overdue": overdue,
-#         "today": today_tasks
-#     }
-
-from fastapi import APIRouter, Depends
+from typing import Optional
+from uuid import UUID
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 from app.core.database import get_db
@@ -58,16 +12,16 @@ from app.models.boards import Board
 from app.models.team_member import TeamMember
 from app.models.team import Team
 from app.api.endpoints.users import get_current_user
-
+ 
 router = APIRouter()
-
-
+ 
+ 
 def serialize_card(card: Card, db: Session):
     board = db.query(Board).filter(Board.id == card.board_id).first()
     list_obj = db.query(List).filter(List.id == card.list_id).first()
     list_name = list_obj.title if list_obj else None
     team_id = str(board.team_id) if board and board.team_id else None
-
+ 
     def normalize_title(t: str) -> str:
         if not t:
             return t
@@ -79,7 +33,7 @@ def serialize_card(card: Card, db: Session):
         if s in ("completed", "done"):
             return "Done"
         return t.strip()
-
+ 
     canonical = normalize_title(list_name) if list_name else None
     # standardized status keys for kanban grouping: 'to_do', 'in_progress', 'done'
     if card.completed_at or canonical == "Done":
@@ -88,33 +42,38 @@ def serialize_card(card: Card, db: Session):
         status_key = "in_progress"
     else:
         status_key = "to_do"
-
+ 
+    start_date = None
+    if getattr(card, "start_date", None):
+        try:
+            start_date = card.start_date.isoformat()
+        except Exception:
+            start_date = str(card.start_date)
+    elif card.created_at:
+        try:
+            start_date = card.created_at.isoformat()
+        except Exception:
+            start_date = str(card.created_at)
+ 
     due_date = None
     if card.due_date:
         try:
             due_date = card.due_date.isoformat()
         except Exception:
             due_date = str(card.due_date)
-
+ 
     completed_at = None
     if card.completed_at:
         try:
             completed_at = card.completed_at.isoformat()
         except Exception:
             completed_at = str(card.completed_at)
-            
-    created_at = None
-    if card.created_at:
-        try:
-           created_at = card.created_at.isoformat()
-        except Exception:
-           created_at = str(card.created_at)
-
+ 
     return {
         "id": str(card.id),
         "title": card.title,
         "description": card.description,
-        "created_at": created_at,   # ✅ ✅ THIS LINE FIXES EVERYTHING
+        "start_date": start_date,
         "due_date": due_date,
         "completed_at": completed_at,
         "assigned_to": str(card.assigned_to) if card.assigned_to else None,
@@ -125,42 +84,44 @@ def serialize_card(card: Card, db: Session):
         "list_name": canonical or list_name,
         "status": status_key,
     }
-
-
+ 
+ 
 @router.get("/planner")
 def get_planner_data(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    team_id: Optional[UUID] = Query(None),
+    board_id: Optional[UUID] = Query(None),
 ):
     today = date.today()
-
+ 
     team_ids = [
         membership.team_id
         for membership in db.query(TeamMember).filter(TeamMember.user_id == current_user.id).all()
     ]
     owned_team_ids = [team.id for team in db.query(Team).filter(Team.owner_id == current_user.id).all()]
     all_team_ids = list({*team_ids, *owned_team_ids})
-
-    # Include all cards on personal boards owned by the current user
-    personal_cards = db.query(Card).join(Board).filter(
-        Board.owner_id == current_user.id,
-        Board.team_id == None,
-    ).all()
-
-    team_cards = []
+ 
+    board_filters = [Board.owner_id == current_user.id]
     if all_team_ids:
-        team_cards = db.query(Card).join(Board).filter(Board.team_id.in_(all_team_ids)).all()
-
-    cards = personal_cards + team_cards
+        board_filters.append(Board.team_id.in_(all_team_ids))
+ 
+    cards_query = db.query(Card).join(Board).filter(or_(*board_filters))
+    if team_id:
+        cards_query = cards_query.filter(Board.team_id == team_id)
+    if board_id:
+        cards_query = cards_query.filter(Board.id == board_id)
+ 
+    cards = cards_query.all()
     assigned = []
     overdue = []
     today_tasks = []
     kanban = {"to_do": [], "in_progress": [], "done": []}
-
+ 
     for c in cards:
         serialized = serialize_card(c, db)
         is_done = bool(c.completed_at) or (serialized.get("list_name") == "Done") or (serialized.get("status") == "done")
-
+ 
         # only include active (not done) tasks in assigned/today/overdue
         if not is_done:
             if c.due_date:
@@ -171,7 +132,7 @@ def get_planner_data(
                         due = c.due_date.date()
                 except Exception:
                     due = None
-
+ 
                 if due:
                     if due == today:
                         today_tasks.append(serialized)
@@ -183,20 +144,25 @@ def get_planner_data(
                     assigned.append(serialized)
             else:
                 assigned.append(serialized)
-
+ 
         # build kanban including done/in_progress/to_do
         if is_done:
             kanban["done"].append(serialized)
             continue
-
+ 
         if serialized["status"] == "in_progress":
             kanban["in_progress"].append(serialized)
         else:
             kanban["to_do"].append(serialized)
-
+ 
+    active_tasks = assigned + today_tasks + overdue
+ 
     return {
         "assigned": assigned,
         "overdue": overdue,
         "today": today_tasks,
         "kanban": kanban,
+        "tasks": active_tasks,
     }
+ 
+ 

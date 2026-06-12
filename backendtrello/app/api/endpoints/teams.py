@@ -373,20 +373,6 @@ def accept_team_invite(
     members = db.query(TeamMember).filter(
     TeamMember.team_id == invite.team_id).all()
 
-    # for m in members:
-    #    asyncio.create_task(
-    #         manager.send(
-    #             str(m.user_id),
-    #             {
-    #                 "type": "team_update",
-    #                 "payload": {
-    #                     "team_id": str(invite.team_id),
-    #                     "event": "member_joined",
-    #                     "user": f"{current_user.first_name} {current_user.last_name}"
-    #             }
-    #         }
-    #     )
-    # )
 
     return {
         "message": "Invite accepted ✅",
@@ -468,6 +454,8 @@ def get_team(
         "invites": invite_data
     }
     
+from app.models.card import Card
+
 @router.delete("/teams/{team_id}")
 def delete_team(
     team_id: UUID,
@@ -482,16 +470,56 @@ def delete_team(
     if team.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not allowed")
 
-    # ✅ DELETE DEPENDENCIES FIRST
-    db.query(Board).filter(Board.team_id == team_id).delete()
-    db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
-    db.query(TeamInvite).filter(TeamInvite.team_id == team_id).delete()
+    try:
+        # ✅ GET ALL BOARDS FIRST
+        boards = db.query(Board).filter(Board.team_id == team_id).all()
 
-    # ✅ THEN DELETE TEAM
-    db.delete(team)
-    db.commit()
+        for board in boards:
+            # ✅ DELETE CARDS OF EACH BOARD
+            db.query(Card).filter(Card.board_id == board.id).delete()
 
-    return {"message": "Team deleted"}
+        # ✅ DELETE BOARDS
+        db.query(Board).filter(Board.team_id == team_id).delete()
+
+        # ✅ DELETE TEAM MEMBERS & INVITES
+        db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
+        db.query(TeamInvite).filter(TeamInvite.team_id == team_id).delete()
+
+        # ✅ DELETE TEAM
+        db.delete(team)
+
+        db.commit()
+
+        return {"message": "Team deleted ✅"}
+
+    except Exception as e:
+        db.rollback()
+        print("❌ DELETE ERROR:", str(e))   # ✅ VERY IMPORTANT DEBUG
+        raise HTTPException(status_code=500, detail="Delete failed")
+# @router.delete("/teams/{team_id}")
+# def delete_team(
+#     team_id: UUID,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     team = db.query(Team).filter(Team.id == team_id).first()
+
+#     if not team:
+#         raise HTTPException(status_code=404, detail="Team not found")
+
+#     if team.owner_id != current_user.id:
+#         raise HTTPException(status_code=403, detail="Not allowed")
+
+#     # ✅ DELETE DEPENDENCIES FIRST
+#     db.query(Board).filter(Board.team_id == team_id).delete()
+#     db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
+#     db.query(TeamInvite).filter(TeamInvite.team_id == team_id).delete()
+
+#     # ✅ THEN DELETE TEAM
+#     db.delete(team)
+#     db.commit()
+
+#     return {"message": "Team deleted"}
 
 
 @router.patch("/teams/{team_id}/archive")
@@ -522,34 +550,6 @@ def archive_team(
 
     return {"message": "Team archived"}
 
-
-@router.patch("/teams/{team_id}/unarchive")
-def unarchive_team(
-    team_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    team = db.query(Team).filter(Team.id == team_id).first()
-
-    if not team:
-        raise HTTPException(status_code=404, detail="Team not found")
-
-    # allow owner or team admin member to unarchive
-    allowed = False
-    if team.owner_id == current_user.id:
-        allowed = True
-    else:
-        member = db.query(TeamMember).filter(TeamMember.team_id == team_id, TeamMember.user_id == current_user.id).first()
-        if member and getattr(member, "role", "") == "admin":
-            allowed = True
-
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Not allowed")
-
-    team.archived = False
-    db.commit()
-
-    return {"message": "Team unarchived"}
 
 @router.get("/teams/archived")
 def get_archived_teams(
