@@ -258,7 +258,7 @@ async def invite_members(
                 message=f"You were invited to {team.name}",
                 type="invite",
                 category="team",
-                entity_id=invite.id
+                entity_id=team.id
             )
  
             await manager.send_to_user(
@@ -408,6 +408,8 @@ def reject_team_invite(
     return {"message": "Invite rejected ❌"}
  
  
+from datetime import datetime
+
 # ✅ GET TEAM DETAILS (FIXED BUG ✅)
 @router.get("/teams/{team_id}")
 def get_team(
@@ -434,7 +436,9 @@ def get_team(
                 "id": str(user.id),
                 "name": f"{user.first_name} {user.last_name}",
                 "email": user.email,
-                "role": m.role
+                "role": "owner" if user.id == team.owner_id else m.role,  # ✅ FIX HERE
+                # "role": m.role,
+                "avatar": user.avatar   # ✅ ADD THIS LINE
             })
  
     # ✅ FIXED INVITES (IMPORTANT 🔥)
@@ -457,7 +461,9 @@ def get_team(
         "members": member_data,
         "invites": invite_data
     }
-   
+
+from app.models.card import Card
+ 
 @router.delete("/teams/{team_id}")
 def delete_team(
     team_id: UUID,
@@ -472,16 +478,56 @@ def delete_team(
     if team.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not allowed")
  
-    # ✅ DELETE DEPENDENCIES FIRST
-    db.query(Board).filter(Board.team_id == team_id).delete()
-    db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
-    db.query(TeamInvite).filter(TeamInvite.team_id == team_id).delete()
+    try:
+        # ✅ GET ALL BOARDS FIRST
+        boards = db.query(Board).filter(Board.team_id == team_id).all()
  
-    # ✅ THEN DELETE TEAM
-    db.delete(team)
-    db.commit()
+        for board in boards:
+            # ✅ DELETE CARDS OF EACH BOARD
+            db.query(Card).filter(Card.board_id == board.id).delete()
  
-    return {"message": "Team deleted"}
+        # ✅ DELETE BOARDS
+        db.query(Board).filter(Board.team_id == team_id).delete()
+ 
+        # ✅ DELETE TEAM MEMBERS & INVITES
+        db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
+        db.query(TeamInvite).filter(TeamInvite.team_id == team_id).delete()
+ 
+        # ✅ DELETE TEAM
+        db.delete(team)
+ 
+        db.commit()
+ 
+        return {"message": "Team deleted ✅"}
+ 
+    except Exception as e:
+        db.rollback()
+        print("❌ DELETE ERROR:", str(e))   # ✅ VERY IMPORTANT DEBUG
+        raise HTTPException(status_code=500, detail="Delete failed")
+# @router.delete("/teams/{team_id}")
+# def delete_team(
+#     team_id: UUID,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     team = db.query(Team).filter(Team.id == team_id).first()
+ 
+#     if not team:
+#         raise HTTPException(status_code=404, detail="Team not found")
+ 
+#     if team.owner_id != current_user.id:
+#         raise HTTPException(status_code=403, detail="Not allowed")
+ 
+#     # ✅ DELETE DEPENDENCIES FIRST
+#     db.query(Board).filter(Board.team_id == team_id).delete()
+#     db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
+#     db.query(TeamInvite).filter(TeamInvite.team_id == team_id).delete()
+ 
+#     # ✅ THEN DELETE TEAM
+#     db.delete(team)
+#     db.commit()
+ 
+#     return {"message": "Team deleted"}
  
  
 @router.patch("/teams/{team_id}/archive")
@@ -591,3 +637,6 @@ def get_archived_teams(
     ).all()
  
     return teams
+
+
+

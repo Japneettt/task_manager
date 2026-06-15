@@ -1,35 +1,36 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
-
+ 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(true);
-
+ 
   // Determine if route is active
   const isActive = (path: string) => location.pathname === path;
-
+ 
   // Menu items with icons
   const menuItems = [
     { icon: "📊", label: "Dashboard", path: "/admin" },
     { icon: "👥", label: "Teams", path: "/admin/teams" },
     { icon: "👤", label: "Users", path: "/admin/users" },
+    { icon: "❓", label: "User Queries", path: "/admin/queries" },
   ];
-
+ 
   const sidebarWidth = collapsed ? "70px" : "220px";
   const contentPadding = collapsed ? "20px" : "20px";
-
+ 
   // Handle logout
   const handleLogout = () => {
     // Clear auth data
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     sessionStorage.clear();
-    
+   
     // Redirect to login
     navigate("/login");
   };
-
+ 
   return (
     <div style={{
       display: "flex",
@@ -58,7 +59,13 @@ const AdminLayout = () => {
           marginBottom: "24px",
           transition: "all 0.3s ease"
         }}>
-          {!collapsed && <h2 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#1f2937" }}>Admin</h2>}
+        {!collapsed && (
+          <img
+            src="/workivo.jpg"
+            alt="logo"
+            style={{ height: "32px", width: "auto", marginBottom: "8px" }}
+          />
+        )}
           <button
             onClick={() => setCollapsed(!collapsed)}
             style={{
@@ -86,7 +93,7 @@ const AdminLayout = () => {
             {collapsed ? "→" : "←"}
           </button>
         </div>
-
+ 
         {/* MENU ITEMS */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {menuItems.map((item) => {
@@ -131,7 +138,7 @@ const AdminLayout = () => {
             );
           })}
         </div>
-
+ 
         {/* LOGOUT BUTTON - Fixed at bottom */}
         <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid #e5e7eb" }}>
           <div
@@ -182,5 +189,6 @@ const AdminLayout = () => {
     </div>
   );
 };
-
+ 
 export default AdminLayout;
+ 

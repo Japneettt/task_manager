@@ -6,18 +6,22 @@ class UserBase(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-
+ 
 class UserCreate(UserBase):
     password: str
-    
+   
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-
+   
+    gender: Optional[str] = None                 # ✅ NEW
+    professional_role: Optional[str] = None      # ✅ NEW
+ 
+ 
 class ChangePassword(BaseModel):
     old_password: str
     new_password: str
-
+ 
 class UserRead(UserBase):
     id: UUID
     role: str
@@ -26,6 +30,10 @@ class UserRead(UserBase):
     initials: str
     avatar: Optional[str]=None
     cover_photo: Optional[str]=None
-
+   
+    gender: Optional[str] = None                 # ✅ NEW
+    professional_role: Optional[str] = None      # ✅ NEW
+ 
+ 
     class Config:
         from_attributes = True

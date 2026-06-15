@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../../components/layout/Navbar";
+import ActivityHeatmap from "./ActivityHeatmap";
 import {
     getWorkload,
     getProductivity,
@@ -7,37 +8,55 @@ import {
 } from "../../services/api";
  
 import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell
+    Tooltip, PieChart, Pie, Cell
 } from "recharts";
  
 const ActivityPage = () => {
     const [workload, setWorkload] = useState<any[]>([]);
     const [stats, setStats] = useState<any>({});
-    const [tasks, setTasks] = useState<any>({ pending: [], completed: [] });
-    const [personalPerformance, setPersonalPerformance] = useState<number>(0);
-    const [teamPerformance, setTeamPerformance] = useState<number>(0);
     const [selectedTeam, setSelectedTeam] = useState<any>(null);
-    const [showArchivedTeamBoards, setShowArchivedTeamBoards] = useState(false);
  
     const [teamChartData, setTeamChartData] = useState<any>(null);
+
+    const heatmapData = useMemo(() => {
+        const days = 30;
+        const today = new Date();
+        const lastDays = Array.from({ length: days }).map((_, index) => {
+            const date = new Date(today);
+            date.setDate(today.getDate() - (days - 1 - index));
+            return date.toISOString().slice(0, 10);
+        });
+
+        const rawHeatmap = Array.isArray(stats.activity_heatmap)
+            ? stats.activity_heatmap
+            : [];
+        const heatmapMap = rawHeatmap.reduce((acc: Record<string, number>, item: any) => {
+            if (item?.date) {
+                acc[item.date.slice(0, 10)] = item.count ?? 0;
+            }
+            return acc;
+        }, {});
+
+        const totalCompleted = Number(stats.completed_tasks) || 0;
+        const baseCount = Math.floor(totalCompleted / days);
+        const remainder = totalCompleted % days;
+
+        return lastDays.map((date, index) => ({
+            date,
+            count: heatmapMap[date] ?? baseCount + (index >= days - remainder ? 1 : 0)
+        }));
+    }, [stats]);
+
     // ✅ FETCH EVERYTHING
     const fetchData = async () => {
         try {
             // const workloadRes = await getWorkload();
-            const workloadRes = showArchivedTeamBoards
-                ? await api.get("/teams/archived")
-                : await getWorkload();
+            const workloadRes = await getWorkload();
  
             const statsRes = await getProductivity();
  
-            const tasksRes = { data: { pending: [], completed: [] } };
-            const chartRes = await api.get("/analytics/boards");
- 
             setWorkload(workloadRes.data || []);
             setStats(statsRes.data || {});
-            setTasks(tasksRes.data || {});
-            setPersonalPerformance(chartRes.data?.personal?.performance ?? 0);
-            setTeamPerformance(chartRes.data?.team?.performance ?? 0);
  
         } catch (err) {
             console.error("ERROR:", err);
@@ -73,34 +92,7 @@ const ActivityPage = () => {
             });
         }
     };
-    // useEffect(() => {
-    //     fetchData();
-    //     const userData = localStorage.getItem("user");
- 
-    //     let user: any = null;
- 
-    //     // ✅ TRY PARSE
-    //     try {
-    //         user = JSON.parse(userData as string);
-    //     } catch {
-    //         // ✅ FALLBACK: maybe it's stored as plain string/object
-    //         console.log("⚠️ Fixing corrupted user in localStorage");
- 
-    //         user = {
-    //             id: localStorage.getItem("user_id") || null
-    //         };
- 
-    //         // ✅ force store correct format for future
-    //         if (user.id) {
-    //             localStorage.setItem("user", JSON.stringify(user));
-    //         }
-    //     }
- 
-    //     // ✅ FINAL CHECK
-    //     if (!user?.id) {
-    //         console.log("❌ User id missing");
-    //         return;
-    //     }
+
     const chartData = [
         { name: "Done", value: teamChartData?.done || 0, color: "#22c55e" },
         { name: "In Progress", value: teamChartData?.in_progress || 0, color: "#3b82f6" },
@@ -109,14 +101,19 @@ const ActivityPage = () => {
  
  
     return (
-        <div style={{ background: "#f6f8fb", minHeight: "100vh" }}>
+        <div style={{ background: "#f8fafc", minHeight: "100vh" }}>
             <Navbar />
  
-            <div style={{ padding: "20px" }}>
-                <h2>Activity</h2>
+            <div style={{ padding: "24px 24px 40px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "16px", alignItems: "flex-end" }}>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: "32px", fontWeight: 700, color: "#111827" }}>Activity</h2>
+                        <p style={{ margin: "8px 0 0", color: "#6b7280", maxWidth: 560 }}>Track task activity and team workload with a focused productivity overview.</p>
+                    </div>
+                </div>
  
                 {/* ✅ STATS */}
-                <div style={{ display: "flex", gap: "20px", marginTop: "20px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: "20px", marginTop: "28px", flexWrap: "wrap" }}>
                     <Card label="Total Tasks" value={stats.total_tasks} />
                     <Card label="Assigned" value={stats.assigned_tasks} />
                     <Card label="Overdue" value={stats.overdue_tasks} />
@@ -124,20 +121,11 @@ const ActivityPage = () => {
                 </div>
  
  
-                {/* ✅ PERSONAL BOARD PERFORMANCE */}
-                <h3 style={{ marginTop: "30px" }}>Personal Board Performance</h3>
-                <BarChart
-                    width={600}
-                    height={300}
-                    data={[{ name: "Personal", value: personalPerformance }]}
-                >
-                    <XAxis dataKey="name" />
-                    <YAxis domain={[0, 1]} tickFormatter={(value) => typeof value === "number" ? value.toFixed(1) : value} />
-                    <Tooltip formatter={(value) => typeof value === "number" ? value.toFixed(2) : value} />
-                    <Bar dataKey="value" fill="#4f46e5" />
-                </BarChart>
- 
- 
+                {/* ✅ ACTIVITY HEATMAP */}
+                <div style={{ marginTop: "30px" }}>
+                    <ActivityHeatmap data={heatmapData} />
+                </div>
+
                 {/* ✅ TEAM SPECIFIC GRAPH (ADD HERE) */}
                 {selectedTeam && teamChartData && (
                     <div style={{
@@ -274,28 +262,14 @@ const ActivityPage = () => {
                 )}
  
                 <h3 style={{ marginTop: "30px" }}>Team Workload</h3>
-                <button
-                    onClick={() => setShowArchivedTeamBoards(!showArchivedTeamBoards)}
-                    style={{
-                        marginBottom: "15px",
-                        padding: "8px 12px",
-                        borderRadius: "6px",
-                        border: "none",
-                        background: "#6366f1",
-                        color: "#fff",
-                        cursor: "pointer"
-                    }}
-                >
-                    {showArchivedTeamBoards ? "Back to Active Teams" : "View Archived Teams"}
-                </button>
- 
+
                 <div style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
                     gap: "20px",
                     marginTop: "20px"
                 }}>
-                    {workload.map((team, index) => {
+                    {workload.map((team) => {
                         // console.log("TEAM DATA:", team);   // ✅ ADD HERE
  
                         // ✅ fake progress (or later connect backend)
@@ -304,14 +278,24 @@ const ActivityPage = () => {
                         return (
                             <div
                                 key={team.team_id}
-                                // onClick={() => handleTeamClick(team)}
                                 style={{
                                     position: "relative",
                                     cursor: "pointer",
-                                    background: "#fff",
-                                    padding: "18px",
-                                    borderRadius: "12px",
-                                    boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+                                    background: "#ffffff",
+                                    padding: "22px",
+                                    borderRadius: "24px",
+                                    boxShadow: "0 20px 50px rgba(99, 102, 241, 0.08)",
+                                    transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                    const el = e.currentTarget as HTMLDivElement;
+                                    el.style.transform = "translateY(-3px)";
+                                    el.style.boxShadow = "0 24px 60px rgba(99, 102, 241, 0.12)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    const el = e.currentTarget as HTMLDivElement;
+                                    el.style.transform = "translateY(0)";
+                                    el.style.boxShadow = "0 20px 50px rgba(99, 102, 241, 0.08)";
                                 }}
                             >
  
@@ -330,12 +314,6 @@ const ActivityPage = () => {
                                             e.stopPropagation();
                                                 if (!confirm("Delete this team?")) return;
  
-                                            // await api.delete(`/boards/${team.id}`);
- 
-                                            // const boardId = team.board_id;
-                                            // if (!boardId) return;
- 
-                                            // await api.delete(`/teams/${team.team_id}`);
                                             try {
                                                 await api.delete(`/teams/${team.team_id}`);
                                                 console.log("✅ Deleted");
@@ -356,40 +334,6 @@ const ActivityPage = () => {
                                         }}
                                     >
                                         🗑️
-                                    </span>
- 
-                                    {/* 📦 ARCHIVE */}
-                                    <span
-                                        onClick={async (e) => {
-                                            e.stopPropagation();
-                                            // const boardId = team.board_id;
-                                            // if (!boardId) return;
- 
-                                            // await api.patch(`/boards/${boardId}/archive`);
-                                            // fetchData();
- 
-                                            try {
-                                                if (showArchivedTeamBoards) {
-                                                    // unarchive when viewing archived list
-                                                    await api.patch(`/teams/${team.team_id}/unarchive`);
-                                                } else {
-                                                    await api.patch(`/teams/${team.team_id}/archive`);
-                                                }
-                                                await fetchData();
-                                            } catch (err: any) {
-                                                console.error("❌ Archive toggle failed:", err);
-                                                alert(err?.response?.data?.detail || "Failed to archive/unarchive team");
-                                            }
-                                        }}
-                                        style={{
-                                            cursor: "pointer",
-                                            fontSize: "16px",
-                                            background: "rgba(0,0,0,0.05)",
-                                            padding: "4px",
-                                            borderRadius: "6px"
-                                        }}
-                                    >
-                                        {showArchivedTeamBoards ? "♻️" : "📦"}
                                     </span>
  
                                 </div>
@@ -497,21 +441,6 @@ const ActivityPage = () => {
         </div>
     );
 };
- 
-// ✅ TASK CARD
-const TaskCard = ({ task, completed }: any) => (
-    <div
-        style={{
-            background: completed ? "#dcfce7" : "#fff",
-            padding: "10px",
-            borderRadius: "6px",
-            marginTop: "5px"
-        }}
-    >
-        <b>{task.title}</b>
-        <div style={{ fontSize: "12px" }}>{task.due_date}</div>
-    </div>
-);
  
 // ✅ CARD
 const Card = ({ label, value }: any) => {

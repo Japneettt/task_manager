@@ -16,28 +16,41 @@ import CreateTeam from "./features/team/CreateTeam";
 import InviteMembers from "./features/team/InviteMembers";
 import TeamDashboard from "./features/team/TeamDashboard";
 import HomePage from "./features/HomePage";
+ 
+import ProfilePage from "./features/Pages/ProfilePage";
 import AdminLayout from "./features/admin/AdminLayout";
 import AdminDashboard from "./features/admin/AdminDashboard";
 import TeamManagement from "./features/admin/TeamManagement";
 import UserInsights from "./features/admin/UserInsights";
-import ProfilePage from "./features/Pages/ProfilePage";
+import HelpPage from "./features/Pages/HelpPage";
+import FaqPage from "./features/Pages/FaqPage";
+import ChangePasswordPage from "./features/Pages/ChangePasswordPage";
+import UserQueries from "./features/admin/UserQueries";
+// ✅ adjust path if needed
 /**
  * ✅ TEMP AUTH CHECK
  */
 const isAuthenticated = (): boolean => {
   return localStorage.getItem("isLoggedIn") === "true";
 };
-
+ 
+ 
 const isAdmin = () => {
   return localStorage.getItem("isAdmin") === "true";
 };
  
+const AdminRoute = ({ children }: { children: JSX.Element }) => {
+  if (!isAdmin()) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
 /**
  * ✅ PROTECTED ROUTE
  */
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
   return children;
 };
@@ -52,16 +65,10 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
  
-const AdminRoute = ({ children }: { children: JSX.Element }) => {
-  if (!isAdmin()) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-};
- 
 function App() {
   return (
     <BrowserRouter>
+   
       <Routes>
  
         <Route
@@ -74,8 +81,15 @@ function App() {
         />
  
         {/* ✅ AUTH */}
-
-        
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <AuthPage />
+            </PublicRoute>
+          }
+        />
+ 
         {/* ✅ DASHBOARD */}
         <Route
           path="/dashboard"
@@ -116,28 +130,13 @@ function App() {
           }
         />
  
-       
-  
         <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route path="/teams" element={<TeamsPage />} />
         <Route path="/planner" element={<PlannerPage />} />
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <RegisterPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/verify"
-          element={
-            <PublicRoute>
-              <VerifyOtpPage />
-            </PublicRoute>
-          }
-        />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify" element={<VerifyOtpPage />} />
         <Route path="/activity" element={<ActivityPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route
           path="/login"
           element={
@@ -146,10 +145,27 @@ function App() {
             </PublicRoute>
           }
         />
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePasswordPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/faq"
+          element={
+            <ProtectedRoute>
+              <FaqPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/help" element={<HelpPage />} />
  
  
         <Route path="/teams/create" element={<CreateTeam />} /><Route path="/teams/:id/invite" element={<InviteMembers />} /><Route path="/teams/:id" element={<TeamDashboard />} />
-
+        {/* ✅ ADMIN ROUTES */}
         <Route
           path="/admin"
           element={
@@ -158,12 +174,12 @@ function App() {
             </AdminRoute>
           }
         >
+           
           <Route index element={<AdminDashboard />} />
           <Route path="teams" element={<TeamManagement />} />
           <Route path="users" element={<UserInsights />} />
+          <Route path="queries" element={<UserQueries />} />
         </Route>
-
-        <Route path="/profile" element={<ProfilePage/>} />
  
         {/* ✅ FALLBACK */}
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -174,3 +190,4 @@ function App() {
 }
  
 export default App;
+ 

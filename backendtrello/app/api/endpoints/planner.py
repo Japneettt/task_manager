@@ -1,4 +1,7 @@
-﻿from fastapi import APIRouter, Depends
+﻿from typing import Optional
+from uuid import UUID
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 from app.core.database import get_db
@@ -40,6 +43,18 @@ def serialize_card(card: Card, db: Session):
     else:
         status_key = "to_do"
 
+    start_date = None
+    if getattr(card, "start_date", None):
+        try:
+            start_date = card.start_date.isoformat()
+        except Exception:
+            start_date = str(card.start_date)
+    elif card.created_at:
+        try:
+            start_date = card.created_at.isoformat()
+        except Exception:
+            start_date = str(card.created_at)
+
     due_date = None
     if card.due_date:
         try:
@@ -58,6 +73,7 @@ def serialize_card(card: Card, db: Session):
         "id": str(card.id),
         "title": card.title,
         "description": card.description,
+        "start_date": start_date,
         "due_date": due_date,
         "completed_at": completed_at,
         "assigned_to": str(card.assigned_to) if card.assigned_to else None,
@@ -73,7 +89,9 @@ def serialize_card(card: Card, db: Session):
 @router.get("/planner")
 def get_planner_data(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    team_id: Optional[UUID] = Query(None),
+    board_id: Optional[UUID] = Query(None),
 ):
     today = date.today()
 
@@ -84,17 +102,17 @@ def get_planner_data(
     owned_team_ids = [team.id for team in db.query(Team).filter(Team.owner_id == current_user.id).all()]
     all_team_ids = list({*team_ids, *owned_team_ids})
 
-    # Include all cards on personal boards owned by the current user
-    personal_cards = db.query(Card).join(Board).filter(
-        Board.owner_id == current_user.id,
-        Board.team_id == None,
-    ).all()
-
-    team_cards = []
+    board_filters = [Board.owner_id == current_user.id]
     if all_team_ids:
-        team_cards = db.query(Card).join(Board).filter(Board.team_id.in_(all_team_ids)).all()
+        board_filters.append(Board.team_id.in_(all_team_ids))
 
-    cards = personal_cards + team_cards
+    cards_query = db.query(Card).join(Board).filter(or_(*board_filters))
+    if team_id:
+        cards_query = cards_query.filter(Board.team_id == team_id)
+    if board_id:
+        cards_query = cards_query.filter(Board.id == board_id)
+
+    cards = cards_query.all()
     assigned = []
     overdue = []
     today_tasks = []
@@ -137,9 +155,12 @@ def get_planner_data(
         else:
             kanban["to_do"].append(serialized)
 
+    active_tasks = assigned + today_tasks + overdue
+
     return {
         "assigned": assigned,
         "overdue": overdue,
         "today": today_tasks,
         "kanban": kanban,
+        "tasks": active_tasks,
     }

@@ -26,3 +26,6 @@ class User(Base):
 
     avatar = Column(String, nullable=True)
     cover_photo = Column(String, nullable=True)
+
+    gender = Column(String, nullable=True)  # ✅
+    professional_role = Column(String, nullable=True)  # ✅
