@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     
     ADMIN_EMAIL: str
     ADMIN_PASSWORD: str
+    
+# ✅ ADD THIS
+    GROQ_API_KEY: str
+
 
     class Config:
         env_file = ".env"

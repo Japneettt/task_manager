@@ -230,6 +230,9 @@ const Dashboard = () => {
       );
 
       const createdTeam = res.data;
+      
+
+
 
       // ✅ INVITE MEMBERS
       if (teamMembers.trim()) {
@@ -248,6 +251,8 @@ const Dashboard = () => {
       }
 
       alert("Team created successfully ✅");
+      // ✅ ✅ ADD THIS LINE
+navigate(`/teams/${createdTeam.id}`);
 
       setTeamName("");
       setTeamDescription("");

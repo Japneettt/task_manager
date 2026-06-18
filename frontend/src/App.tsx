@@ -27,6 +27,8 @@ import HelpPage from "./features/pages/HelpPage";
 import FaqPage from "./features/pages/FaqPage";
 import ChangePasswordPage from "./features/pages/ChangePassword";
 import UserQueries from "./features/admin/UserQueries";
+import ChatWidget from "./components/ChatWidget/ChatWidget";
+
 // ✅ adjust path if needed
 /**
  * ✅ TEMP AUTH CHECK
@@ -195,6 +197,9 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
+      
+ <ChatWidget />
+
     </BrowserRouter>
   );
 }

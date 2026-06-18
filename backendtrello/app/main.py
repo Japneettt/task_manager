@@ -7,10 +7,20 @@ from app.core.config import settings
 from app.websocket.manager import manager
 from app.core.database import engine, Base
 from app.core.security import decode_token
+from app.chatbot.vector_store import initialize_vector_store
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env file
 app = FastAPI(
     title="Backend Trello",
     version="1.0.0"
 )
+@app.on_event("startup")
+async def startup_event():
+    """Initialize ChromaDB with Workivo knowledge base on server start."""
+    print("🚀 Starting Workivo server...")
+    initialize_vector_store()
+    print("✅ Chatbot knowledge base ready!")
 
 app.add_middleware(
     CORSMiddleware,

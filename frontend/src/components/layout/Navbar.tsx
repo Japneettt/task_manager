@@ -103,6 +103,11 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("isAdmin");
+      // ✅ ADD THESE TWO LINES:
+      localStorage.removeItem("userId");           // clear user ID
+  sessionStorage.removeItem("chat_owner");          // clear chat ownership
+  window.dispatchEvent(new Event("workivo:logout")); // signal widget to clear
     navigate("/");
   };
   const handleSettingsNavigate = (path: string) => {

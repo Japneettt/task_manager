@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 from app.core.database import get_db
 from app.api.endpoints.users import get_current_user
 from app.models.card import Card
@@ -30,7 +30,16 @@ def get_dashboard_counts(db: Session = Depends(get_db), current_user=Depends(get
     board_ids = list({*personal_board_ids, *team_board_ids})
 
     # join cards -> lists for title
-    cards_q = db.query(Card).join(List).filter(Card.board_id.in_(board_ids))
+    cards_q = db.query(Card)\
+    .join(List)\
+    .join(Board)\
+    .filter(
+        or_(
+            and_(Board.owner_id == current_user.id, Board.team_id == None),
+            and_(Board.team_id != None, Card.assigned_to == current_user.id)
+        )
+    )
+    # cards_q = db.query(Card).join(List).filter(Card.board_id.in_(board_ids))
 
     # counts by normalized title variants
     todo_count = cards_q.filter(func.lower(List.title).in_(["to do", "todo", "pending"]) ).count()
@@ -74,12 +83,35 @@ def recent_tasks(
         *team_board_ids
     })
 
+    # cards = db.query(Card)\
+    #     .join(List)\
+    #     .filter(Card.board_id.in_(board_ids))\
+    #     .order_by(Card.created_at.desc())\
+    #     .limit(5)\
+    #     .all()
+    from sqlalchemy import or_, and_
+
     cards = db.query(Card)\
-        .join(List)\
-        .filter(Card.board_id.in_(board_ids))\
-        .order_by(Card.created_at.desc())\
-        .limit(5)\
-        .all()
+    .join(List)\
+    .join(Board)\
+    .filter(
+        or_(
+            # ✅ PERSONAL BOARD → show all tasks
+            and_(
+                Board.owner_id == current_user.id,
+                Board.team_id == None
+            ),
+
+            # ✅ TEAM BOARD → show only tasks assigned to current user
+            and_(
+                Board.team_id != None,
+                Card.assigned_to == current_user.id
+            )
+        )
+    )\
+    .order_by(Card.created_at.desc())\
+    .limit(5)\
+    .all()
 
     result = []
 
@@ -103,16 +135,73 @@ def recent_tasks(
         })
 
     return result
+
+from datetime import datetime, timedelta
+
 @router.get("/upcoming-deadlines")
 def upcoming_deadlines(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    today = datetime.utcnow().date()
+    next_5_days = today + timedelta(days=5)
 
-    cards = db.query(Card).filter(
-        Card.assigned_to == current_user.id,
-        Card.due_date != None
-    ).order_by(Card.due_date.asc()).limit(5).all()
+    # ✅ get all boards user has access to (IMPORTANT)
+    personal_board_ids = [
+        b.id for b in db.query(Board).filter(
+            Board.owner_id == current_user.id
+        ).all()
+    ]
+
+    team_ids = [
+        m.team_id for m in db.query(TeamMember).filter(
+            TeamMember.user_id == current_user.id
+        ).all()
+    ]
+
+    team_board_ids = []
+
+    if team_ids:
+        team_board_ids = [
+            b.id for b in db.query(Board).filter(
+                Board.team_id.in_(team_ids)
+            ).all()
+        ]
+
+    board_ids = list({*personal_board_ids, *team_board_ids})
+
+    # ✅ FILTER UPCOMING (THIS IS THE MAIN FIX)
+    # cards = db.query(Card).filter(
+    #     Card.board_id.in_(board_ids),
+    #     Card.due_date != None,
+    #     func.date(Card.due_date) >= today,
+    #     func.date(Card.due_date) <= next_5_days
+    # ).order_by(Card.due_date.asc()).limit(5).all()
+    from sqlalchemy import or_, and_
+
+    cards = db.query(Card)\
+    .join(Board)\
+    .filter(
+        or_(
+            # ✅ PERSONAL BOARD → show all tasks
+            and_(
+                Board.owner_id == current_user.id,
+                Board.team_id == None
+            ),
+
+            # ✅ TEAM BOARD → only tasks assigned to me
+            and_(
+                Board.team_id != None,
+                Card.assigned_to == current_user.id
+            )
+        ),
+        Card.due_date != None,
+        func.date(Card.due_date) >= today,
+        func.date(Card.due_date) <= next_5_days
+    )\
+    .order_by(Card.due_date.asc())\
+    .limit(5)\
+    .all()
 
     return [
         {

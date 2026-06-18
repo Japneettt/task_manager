@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, boards, inbox, planner, activity, users, notifications,tasks, cards, lists, teams, analytics, dashboard, admin
+from app.api.endpoints import auth, boards, inbox, planner, activity, users, notifications,tasks, cards, lists, teams, analytics, dashboard, admin, chatbot
 
 api_router = APIRouter()
 
@@ -18,3 +18,4 @@ api_router.include_router(analytics.router)
 # api_router.include_router(ws_activity.router)
 api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
 api_router.include_router(dashboard.router)
+api_router.include_router(chatbot.router, prefix="/chatbot", tags=["Chatbot"])

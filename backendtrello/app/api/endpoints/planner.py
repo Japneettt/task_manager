@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 from app.core.database import get_db
@@ -106,7 +106,24 @@ def get_planner_data(
     if all_team_ids:
         board_filters.append(Board.team_id.in_(all_team_ids))
  
-    cards_query = db.query(Card).join(Board).filter(or_(*board_filters))
+    # cards_query = db.query(Card).join(Board).filter(or_(*board_filters))
+    
+    cards_query = db.query(Card).join(Board).filter(
+    or_(
+        # ✅ Personal boards → show everything
+        and_(
+            Board.owner_id == current_user.id,
+            Board.team_id == None
+        ),
+
+        # ✅ Team boards → show only assigned to me
+        and_(
+            Board.team_id != None,
+            Card.assigned_to == current_user.id
+        )
+    )
+)
+
     if team_id:
         cards_query = cards_query.filter(Board.team_id == team_id)
     if board_id:

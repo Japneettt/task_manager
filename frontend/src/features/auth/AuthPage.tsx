@@ -204,6 +204,9 @@ const AuthPage = () => {
       const res = await api.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.access_token);
       localStorage.setItem("isLoggedIn", "true");
+      window.dispatchEvent(new Event("workivo:login"));
+      const userRes =await api.get("users/me");
+      localStorage.setItem("userId", userRes.data.id);
       navigate("/dashboard");
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Invalid email or password");
@@ -224,6 +227,7 @@ const AuthPage = () => {
       localStorage.setItem("token", res.data.access_token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
       localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("isAdmin", res.data.user.id);
 
       navigate("/dashboard");
     } catch (err) {
@@ -819,6 +823,7 @@ const AuthPage = () => {
 
                   localStorage.setItem("token", res.data.access_token);
                   localStorage.setItem("isAdmin", "true");
+                  localStorage.setItem("userId", res.data.user.id);
 
                   navigate("/admin");
                 } catch (err: any) {

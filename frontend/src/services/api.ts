@@ -36,6 +36,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("userId");
+      sessionStorage.removeItem("chat_owner");
+      window.dispatchEvent(new Event("workivo:logout"));
       window.location.href = "/";
     }
     return Promise.reject(error);

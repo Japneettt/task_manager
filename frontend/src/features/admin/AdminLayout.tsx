@@ -25,6 +25,11 @@ const AdminLayout = () => {
     // Clear auth data
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("isAdmin");
+    localStorage.removeItem("userId");
+    sessionStorage.removeItem("chat_owner");
+    window.dispatchEvent(new Event("workivo:logout"));
     sessionStorage.clear();
     
     // Redirect to login

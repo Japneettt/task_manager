@@ -1,19 +1,14 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func
 from uuid import UUID
 from typing import Optional
 import asyncio
-
-# WebSocket manager
 from app.websocket.manager import manager
-# import asyncio
- 
 # ✅ DB
 from app.core.database import get_db
 from app.api.endpoints.users import get_current_user
- 
 # ✅ Models
 from app.models.card import Card
 from app.models.lists import List
@@ -21,11 +16,8 @@ from app.models.notification import Notification
 from app.models.boards import Board
 from app.models.team_member import TeamMember
 from app.models.user import User
- 
 # ✅ Schemas
 from app.schemas.card import CardCreate, CardRead
- 
-# # ✅ WebSocket Manager
 # from app.websocket.manager import manager
  
 router = APIRouter()
@@ -308,39 +300,63 @@ def update_due_date(card_id: UUID, due_date: str, db: Session = Depends(get_db))
     return {"message": "Due date updated"}
  
 from datetime import datetime
- 
+from app.models.lists import List
+
 @router.patch("/cards/{card_id}/complete")
 def complete_card(card_id: UUID, db: Session = Depends(get_db)):
     card = db.query(Card).filter(Card.id == card_id).first()
- 
+
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
- 
-    # ✅ mark as completed instead of deleting
+
+    # ✅ mark as completed
     card.completed_at = datetime.utcnow()
- 
+
+    # ✅ ✅ MOVE CARD TO DONE LIST (MAIN FIX)
+    done_list = db.query(List).filter(
+        List.board_id == card.board_id,
+        func.lower(List.title).in_(["done", "completed"])
+    ).first()
+
+    if done_list:
+        card.list_id = done_list.id   # ✅ THIS FIXES EVERYTHING
+
     db.commit()
     db.refresh(card)
 
-    # Notify relevant users so dashboards/planner refresh
-    try:
-        board = db.query(Board).filter(Board.id == card.board_id).first()
-        recipients = set()
-        if card.assigned_to:
-            recipients.add(str(card.assigned_to))
-        if board and board.owner_id:
-            recipients.add(str(board.owner_id))
-        if board and board.team_id:
-            members = db.query(TeamMember).filter(TeamMember.team_id == board.team_id).all()
-            for m in members:
-                recipients.add(str(m.user_id))
-
-        payload = {"type": "card_completed", "payload": {"card_id": str(card.id), "board_id": str(card.board_id)}}
-        for user_id in recipients:
-            asyncio.create_task(manager.send_to_user(user_id, payload))
-    except Exception:
-        pass
-
     return {"message": "Task completed ✅"}
+# @router.patch("/cards/{card_id}/complete")
+# def complete_card(card_id: UUID, db: Session = Depends(get_db)):
+#     card = db.query(Card).filter(Card.id == card_id).first()
+ 
+#     if not card:
+#         raise HTTPException(status_code=404, detail="Card not found")
+ 
+#     # ✅ mark as completed instead of deleting
+#     card.completed_at = datetime.utcnow()
+ 
+#     db.commit()
+#     db.refresh(card)
+
+#     # Notify relevant users so dashboards/planner refresh
+#     try:
+#         board = db.query(Board).filter(Board.id == card.board_id).first()
+#         recipients = set()
+#         if card.assigned_to:
+#             recipients.add(str(card.assigned_to))
+#         if board and board.owner_id:
+#             recipients.add(str(board.owner_id))
+#         if board and board.team_id:
+#             members = db.query(TeamMember).filter(TeamMember.team_id == board.team_id).all()
+#             for m in members:
+#                 recipients.add(str(m.user_id))
+
+#         payload = {"type": "card_completed", "payload": {"card_id": str(card.id), "board_id": str(card.board_id)}}
+#         for user_id in recipients:
+#             asyncio.create_task(manager.send_to_user(user_id, payload))
+#     except Exception:
+#         pass
+
+#     return {"message": "Task completed ✅"}
  
  
