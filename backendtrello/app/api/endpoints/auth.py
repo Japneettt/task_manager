@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime
@@ -11,6 +11,7 @@ from app.core.security import (
     verify_password,
     create_access_token,
     create_refresh_token,
+    decode_token,
 )
 
 router = APIRouter()
@@ -18,6 +19,17 @@ router = APIRouter()
 import random
 from app.models.otp import OTP
 from app.utils.email import send_otp
+
+def set_refresh_cookie(response: Response, refresh_token: str):
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,        # JS cannot read this — blocks XSS theft
+        secure=False,         # ⚠️ set True once you're on HTTPS (see note below)
+        samesite="lax",       # sent on top-level navigation + same-site requests
+        max_age=7 * 24 * 60 * 60,  # 7 days in seconds — keep in sync with REFRESH_TOKEN_EXPIRE_DAYS
+        path="/auth",         # cookie is only sent to /auth/* routes (refresh, logout)
+    )
 
 @router.post("/register")
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
@@ -46,6 +58,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(
     data: LoginRequest,
+    response: Response,
     db: Session = Depends(get_db),
 ):
     user = db.execute(
@@ -63,13 +76,75 @@ def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated",
         )
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    set_refresh_cookie(response, refresh_token)
 
     return {
         "access_token": create_access_token({"sub": str(user.id)}),
-        "refresh_token": create_refresh_token({"sub": str(user.id)}),
+        # "refresh_token": create_refresh_token({"sub": str(user.id)}),
         "token_type": "bearer",
+        "user":{
+            "id": str(user.id),
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name":user.last_name,
+        },
     }
     
+
+@router.post("/refresh")
+def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
+    token = request.cookies.get("refresh_token")
+
+    if not token:
+        raise HTTPException(status_code=401, detail="No refresh token found")
+
+    try:
+        payload = decode_token(token)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    if payload.get("type") != "refresh":
+        raise HTTPException(status_code=401, detail="Not a refresh token")
+
+    user_id = payload.get("sub")
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalars().first()
+
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+
+    new_refresh = create_refresh_token({"sub": str(user.id)})
+    set_refresh_cookie(response, new_refresh)
+
+    return {
+        "access_token": create_access_token({"sub": str(user.id)}),
+        "token_type": "bearer",
+    }
+# @router.post("/refresh")
+# def refresh_token(data: RefreshRequest, db: Session = Depends(get_db)):
+#     try:
+#         payload = decode_token(data.refresh_token)
+#     except HTTPException:
+#         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+#     if payload.get("type") != "refresh":
+#         raise HTTPException(status_code=401, detail="Not a refresh token")
+
+#     user_id = payload.get("sub")
+#     user = db.execute(
+#         select(User).where(User.id == user_id)
+#     ).scalars().first()
+
+#     if not user or not user.is_active:
+#         raise HTTPException(status_code=401, detail="User not found or inactive")
+
+#     return {
+#         "access_token": create_access_token({"sub": str(user.id)}),
+#         "refresh_token": create_refresh_token({"sub": str(user.id)}), 
+#         "token_type": "bearer",
+#     }
 
 @router.post("/verify-otp")
 def verify(data: VerifySchema, db: Session = Depends(get_db)):
@@ -121,9 +196,8 @@ def resend_otp(email: str, db: Session = Depends(get_db)):
 
 
 @router.post("/google")
-def google_login(data: dict, db: Session = Depends(get_db)):
+def google_login(data: dict, response: Response, db: Session = Depends(get_db)):
     token = data.get("token")
-
     decoded = verify_firebase_token(token)
 
     if not decoded:
@@ -148,10 +222,12 @@ def google_login(data: dict, db: Session = Depends(get_db)):
         db.add(user)
         db.commit()
         db.refresh(user)
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    set_refresh_cookie(response, refresh_token)
 
     return {
         "access_token": create_access_token({"sub": str(user.id)}),
-        "refresh_token": create_refresh_token({"sub": str(user.id)}),
+        # "refresh_token": create_refresh_token({"sub": str(user.id)}),
         "user": {
             "id": str(user.id),
             "email": user.email,
@@ -183,3 +259,8 @@ def admin_login(data: LoginRequest, db: Session = Depends(get_db)):
             "is_admin": True
         }
     }
+    
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(key="refresh_token", path="/auth")
+    return {"message": "Logged out"}

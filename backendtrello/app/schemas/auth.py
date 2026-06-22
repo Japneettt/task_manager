@@ -20,3 +20,6 @@ class VerifySchema(BaseModel):
     last_name: str
     password: str
     otp: str
+
+# class RefreshRequest(BaseModel):
+#     refresh_token: str

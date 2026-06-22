@@ -15,6 +15,9 @@ from app.models.boards import Board
 from app.models.team_member import TeamMember
 from app.models.team_invite import TeamInvite
 from app.models.user_query import UserQuery
+from app.websocket.manager import manager
+from app.services.notification_service import create_notification
+from app.utils.email import send_query_reply_email
 router = APIRouter()
 @router.get("/dashboard")
 def dashboard(db: Session = Depends(get_db), admin=Depends(get_admin)):
@@ -434,50 +437,71 @@ def get_queries(
             "id": str(q.id),
             "message": q.message,
             "created_at": q.created_at,
-            "user": user.email if user else "Unknown"
+            "user": user.email if user else "Unknown",
+            #added      
+            "admin_reply": q.admin_reply,
+            "replied": q.replied,
+            "replied_at": q.replied_at
+
         })
 
     return result
-# @router.get("/tasks")
-# def admin_tasks(db: Session = Depends(get_db), admin=Depends(get_admin), status: str = "all", team_id: str = "all"):
-#     q = db.query(Card)
+
+@router.post("/queries/{query_id}/reply")
+async def reply_to_query(
+    query_id: str,
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    query = (
+        db.query(UserQuery)
+        .filter(UserQuery.id == query_id)
+        .first()
+    )
+
+    if not query:
+        raise HTTPException(
+            status_code=404,
+            detail="Query not found"
+        )
+
+    query.admin_reply = data["reply"]
+    query.replied = True
+    query.replied_at = datetime.utcnow()
+
+    db.commit()
     
-#     if status != "all":
-#         if status == "Done":
-#             q = q.filter(Card.completed_at != None)
-#         elif status == "To Do":
-#             q = q.filter(Card.completed_at == None)
-    
-#     if team_id != "all":
-#         q = q.join(Board, Board.id == Card.board_id).filter(Board.team_id == team_id)
+    user = (
+    db.query(User)
+    .filter(User.id == query.user_id)
+    .first()
+)
 
-#     cards = q.order_by(Card.due_date.asc().nullsfirst()).limit(100).all()
+    if user:
+        send_query_reply_email(
+        user.email,
+        data["reply"]
+    )
 
-#     out = []
-#     for c in cards:
-#         assigned = None
-#         if c.assigned_to:
-#             u = db.query(User).filter(User.id == cast(c.assigned_to, UUID)).first()
-#             # u = db.query(User).filter(User.id == c.assigned_to).first()
-#             if u:
-#                 assigned = {"id": str(u.id), "name": f"{u.first_name} {u.last_name}"}
 
-#         board = db.query(Board).filter(Board.id == c.board_id).first()
-#         team = None
-#         if board and board.team_id:
-#             t = db.query(Team).filter(Team.id == board.team_id).first()
-#             if t:
-#                 team = {"id": str(t.id), "name": t.name}
+    # Create notification
+    create_notification(
+        db=db,
+        user_id=query.user_id,
+        title="Workivo Support Reply",
+        message=f"Workivo Support replied to your query: {data['reply']}"
+    )
 
-#         out.append({
-#             "id": str(c.id),
-#             "title": c.title,
-#             "assigned_user": assigned,
-#             "team": team,
-#             "board": {"id": str(board.id), "title": board.title} if board else None,
-#             "due_date": c.due_date.isoformat() if c.due_date else None,
-#             "status": "Done" if c.completed_at else ("To Do" if not c.completed_at else "In Progress"),
-#         })
+    # Send realtime websocket message
+    await manager.send_to_user(
+        str(query.user_id),
+        {
+            "type": "query_reply",
+            "query_id": str(query.id),
+            "reply": data["reply"]
+        }
+    )
 
-#     return out
- 
+    return {
+        "message": "Reply sent successfully ✅"
+    }

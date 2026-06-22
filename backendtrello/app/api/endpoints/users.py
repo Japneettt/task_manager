@@ -204,3 +204,18 @@ def submit_query(
     db.commit()
 
     return {"message": "Query sent successfully ✅"}
+
+
+@router.get("/my-queries")
+def get_my_queries(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    queries = (
+        db.query(UserQuery)
+        .filter(UserQuery.user_id == current_user.id)
+        .order_by(UserQuery.created_at.desc())
+        .all()
+    )
+
+    return queries

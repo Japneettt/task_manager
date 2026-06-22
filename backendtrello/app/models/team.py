@@ -10,7 +10,7 @@ class Team(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     name = Column(String, nullable=False)
-    type = Column(String, nullable=True)  # public/private/company
+    type = Column(String, nullable=True)  # public/private
     description = Column(String, nullable=True)
     archived = Column(Boolean, default=False)
     image_url = Column(String, nullable=True)

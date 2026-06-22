@@ -203,7 +203,36 @@ def get_user_teams(
         for team in teams
     ]
 
+# ✅ ADD THIS TO app/api/endpoints/teams.py
+# Place it anywhere after the other @router definitions (e.g. right after get_team)
 
+@router.patch("/teams/{team_id}/cover")
+async def update_team_cover(
+    team_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # only the owner can change the cover (same rule as archive_team)
+    if team.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    form = await request.form()
+    image = form.get("image")
+
+    if not image or not hasattr(image, "filename") or not image.filename:
+        raise HTTPException(status_code=400, detail="Image file is required")
+
+    image_url = await save_uploaded_team_image(image, request)
+    team.image_url = image_url
+    db.commit()
+    db.refresh(team)
+
+    return {"message": "Cover updated ✅", "image_url": team.image_url}
 # ✅ ✅ ✅ INVITE MEMBERS (MULTI EMAIL WORKING)
 @router.post("/teams/{team_id}/invite")
 def invite_members(

@@ -9,23 +9,42 @@ const AddCard = ({ listId, boardId, refreshBoard, members }: any) => {
   const [assignedTo, setAssignedTo] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("low");
+  const [file, setFile] = useState<File | null>(null);
 
   const createCard = async () => {
     if (!title.trim()) return;
 
-    await api.post(`/lists/${listId}/cards`, {
+    const cardRes=await api.post(`/lists/${listId}/cards`, {
       title: title,
       description: desc,
       assigned_to: assignedTo || null,
       due_date: dueDate ? new Date(dueDate).toISOString() : null,
       priority,
     });
+    if (file) {
+
+  const formData = new FormData();
+
+  formData.append("file", file);
+
+  await api.post(
+    `/cards/${cardRes.data.id}/upload`,
+    formData,
+    {
+      headers: {
+        "Content-Type":
+          "multipart/form-data",
+      },
+    }
+  );
+}
 
     setTitle("");
     setDesc("");
     setAssignedTo("");
     setDueDate("");
     setPriority("low");
+    setFile(null);
     setOpen(false);
 
     const res = await api.get(`/boards/${boardId}`);
@@ -109,6 +128,20 @@ const AddCard = ({ listId, boardId, refreshBoard, members }: any) => {
             onChange={(e) => setDueDate(e.target.value)}
             style={{ width: "100%", marginBottom: "6px" }}
           />
+          <input
+  type="file"
+  onChange={(e) =>
+    setFile(
+      e.target.files && e.target.files.length > 0
+        ? e.target.files[0]
+        : null
+    )
+  }
+  style={{
+    width: "100%",
+    marginBottom: "10px"
+  }}
+/>
 
           <div style={{ display: "flex", gap: "6px" }}>
             <button

@@ -28,7 +28,8 @@ import FaqPage from "./features/pages/FaqPage";
 import ChangePasswordPage from "./features/pages/ChangePassword";
 import UserQueries from "./features/admin/UserQueries";
 import ChatWidget from "./components/ChatWidget/ChatWidget";
-
+import TermsOfService from "./features/pages/TermsOfService";
+import PrivacyPolicy from "./features/pages/PrivacyPolicy";
 // ✅ adjust path if needed
 /**
  * ✅ TEMP AUTH CHECK
@@ -149,6 +150,8 @@ function App() {
         <Route path="/verify" element={<VerifyOtpPage />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route
           path="/login"
           element={
@@ -191,6 +194,7 @@ function App() {
           <Route path="teams" element={<TeamManagement />} />
           <Route path="users" element={<UserInsights />} />
           <Route path="queries" element={<UserQueries />} />
+
         </Route>
 
         {/* ✅ FALLBACK */}

@@ -230,24 +230,56 @@ def get_board(
     # ✅ ADD CARDS
     for l in lists:
         cards = db.query(Card).filter(Card.list_id == l.id).all()
+        card_data = []
+
+        for c in cards:
+            assigned_user = None
+
+            if c.assigned_to:
+                assigned_user = db.query(User).filter(
+            User.id == c.assigned_to
+        ).first()
+
+            card_data.append({
+        "id": str(c.id),
+        "title": c.title,
+        "description": c.description,
+        "due_date": c.due_date if c.due_date else None,
+        "badge": c.badge,
+        "priority": c.priority,
+        "assigned_to": str(c.assigned_to) if c.assigned_to else None,
+        "attachment_url": c.attachment_url,
+        "attachment_name": c.attachment_name,
+
+        "assigned_member_name":
+            f"{assigned_user.first_name} {assigned_user.last_name}"
+            if assigned_user else None
+    })
 
         result["lists"].append({
-            "id": str(l.id),
-            "title": l.title,
-            "position": l.position,
-            "cards": [
-                {
-                    "id": str(c.id),
-                    "title": c.title,
-                    "description": c.description,
-                    "due_date": c.due_date if c.due_date else None,
-                    # "due_date": c.due_date.isoformat() if c.due_date else None,
-                    "badge": c.badge,
-                    "priority": c.priority,
-                    "assigned_to": str(c.assigned_to) if c.assigned_to else None
-                }
-                for c in cards
-            ]
-        })
+    "id": str(l.id),
+    "title": l.title,
+    "position": l.position,
+    "cards": card_data
+})
+
+        # result["lists"].append({
+        #     "id": str(l.id),
+        #     "title": l.title,
+        #     "position": l.position,
+        #     "cards": [
+        #         {
+        #             "id": str(c.id),
+        #             "title": c.title,
+        #             "description": c.description,
+        #             "due_date": c.due_date if c.due_date else None,
+        #             # "due_date": c.due_date.isoformat() if c.due_date else None,
+        #             "badge": c.badge,
+        #             "priority": c.priority,
+        #             "assigned_to": str(c.assigned_to) if c.assigned_to else None
+        #         }
+        #         for c in cards
+        #     ]
+        # })
 
     return result

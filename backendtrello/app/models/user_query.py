@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Text
+from sqlalchemy import Column, String, DateTime, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
@@ -11,3 +11,10 @@ class UserQuery(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # NEW
+    admin_reply = Column(Text, nullable=True)
+
+    replied = Column(Boolean, default=False)
+
+    replied_at = Column(DateTime, nullable=True)

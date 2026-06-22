@@ -18,11 +18,36 @@ from app.models.team_member import TeamMember
 from app.models.user import User
 # ✅ Schemas
 from app.schemas.card import CardCreate, CardRead
-# from app.websocket.manager import manager
- 
+from fastapi import UploadFile, File, Form
+from pathlib import Path
+import uuid
 router = APIRouter()
  
- 
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+
+CARD_UPLOAD_DIR = BASE_DIR / "uploads" / "task_files"
+
+CARD_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# ✅ ADD HERE
+async def save_card_file(file: UploadFile):
+
+    extension = Path(file.filename).suffix
+
+    filename = f"{uuid.uuid4().hex}{extension}"
+
+    filepath = CARD_UPLOAD_DIR / filename
+
+    content = await file.read()
+
+    with open(filepath, "wb") as buffer:
+        buffer.write(content)
+
+    return {
+        "url": f"/uploads/task_files/{filename}",
+        "name": file.filename
+    }
+
 # ✅ CREATE NOTIFICATION
 def create_notification(db, user_id, title, message, entity_id=None):
     notif = Notification(
@@ -325,6 +350,35 @@ def complete_card(card_id: UUID, db: Session = Depends(get_db)):
     db.refresh(card)
 
     return {"message": "Task completed ✅"}
+
+
+@router.post("/cards/{card_id}/upload")
+async def upload_card_file(
+    card_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    card = db.query(Card).filter(
+        Card.id == card_id
+    ).first()
+
+    if not card:
+        raise HTTPException(
+            status_code=404,
+            detail="Card not found"
+        )
+
+    uploaded = await save_card_file(file)
+
+    card.attachment_url = uploaded["url"]
+    card.attachment_name = uploaded["name"]
+
+    db.commit()
+
+    return {
+        "message": "File uploaded",
+        "attachment_url": uploaded["url"]
+    }
 # @router.patch("/cards/{card_id}/complete")
 # def complete_card(card_id: UUID, db: Session = Depends(get_db)):
 #     card = db.query(Card).filter(Card.id == card_id).first()

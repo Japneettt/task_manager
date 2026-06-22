@@ -7,6 +7,7 @@ import {
   rejectTeamInvite,
   api,
   getWebSocketUrl,
+  connectNotificationSocket,
 } from "../../services/api";
  
 type Notification = {
@@ -305,25 +306,60 @@ const InboxPage = () => {
     return () => clearInterval(iv);
   }, [category]);
  
-  useEffect(() => {
-    const raw = localStorage.getItem("user");
-    if (!raw) return;
-    let user: any;
-    try { user = JSON.parse(raw); } catch { return; }
-    const token = localStorage.getItem("token");
-    if (!user?.id || !token) return;
-    const ws = new WebSocket(getWebSocketUrl(`/ws/notifications/${user.id}?token=${encodeURIComponent(token)}`));
-    ws.onmessage = (e) => {
-      try {
-        const d = JSON.parse(e.data);
-        if (d.type === "NEW_INVITE" || d.type === "NEW_NOTIFICATION") {
-          fetchNotifications(); fetchInvites();
-        }
-      } catch {}
-    };
-    return () => ws.close();
-  }, []);
- 
+//   useEffect(() => {
+//     const raw = localStorage.getItem("user");
+//     if (!raw) return;
+//     let user: any;
+//     try { user = JSON.parse(raw); } catch { return; }
+//     const token = localStorage.getItem("token");
+//     if (!user?.id || !token) return;
+//     const ws = new WebSocket(getWebSocketUrl(`/ws/notifications/${user.id}?token=${encodeURIComponent(token)}`));
+//     // ws.onmessage = (e) => {
+//     //   try {
+//     //     const d = JSON.parse(e.data);
+//     //     if (d.type === "NEW_INVITE" || d.type === "NEW_NOTIFICATION") {
+//     //       fetchNotifications(); fetchInvites();
+//     //     }
+//     //   } catch {}
+//     // };
+//     ws.onmessage = (e) => {
+//   try {
+//     const d = JSON.parse(e.data);
+
+//     if (
+//       d.type === "NEW_INVITE" ||
+//       d.type === "NEW_NOTIFICATION"
+//     ) {
+//       fetchNotifications();
+//       fetchInvites();
+//     }
+
+//     // ✅ Admin replied to support query
+//     if (d.type === "query_reply") {
+//       fetchNotifications();
+
+//       window.dispatchEvent(
+//         new CustomEvent("query-replied")
+//       );
+//     }
+
+//   } catch {}
+// };
+//     return () => ws.close();
+//   }, []);
+ useEffect(() => {
+  const ws = connectNotificationSocket((d) => {
+    if (d.type === "NEW_INVITE" || d.type === "NEW_NOTIFICATION") {
+      fetchNotifications();
+      fetchInvites();
+    }
+    if (d.type === "query_reply") {
+      fetchNotifications();
+      window.dispatchEvent(new CustomEvent("query-replied"));
+    }
+  });
+  return () => ws?.close();
+}, []);
   const markAsRead = async (id: string) => {
     try {
       await api.patch(`/notifications/${id}/read`);

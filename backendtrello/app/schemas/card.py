@@ -24,6 +24,8 @@ class CardRead(BaseModel):
     priority: Optional[str]
     due_date: Optional[datetime]
     badge: Optional[str]  # ✅ Custom badge/status
+    attachment_url: Optional[str] = None
+    attachment_name: Optional[str] = None
 
 
     class Config:

@@ -33,4 +33,6 @@ class Card(Base):
     completed_at = Column(DateTime, nullable=True)
     priority = Column(String, default="Medium") 
     badge = Column(String, nullable=True)
+    attachment_url = Column(String, nullable=True)
+    attachment_name = Column(String, nullable=True)
     board = relationship("Board", backref="cards")

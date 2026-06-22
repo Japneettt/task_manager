@@ -26,22 +26,44 @@ def create_list(
         raise HTTPException(status_code=404, detail="Board not found")
 
     # ✅ handle both cases
+    # list_title = None
+    # position = 0
+
+    # if data:
+    #     list_title = data.title
+    #     position = data.position
+    # elif title:
+    #     list_title = title
+    # else:
+    #     raise HTTPException(status_code=400, detail="Title is required")
+
+    # lst = List(
+    #     board_id=board_id,
+    #     title=list_title,
+    #     position=position,
+    # )
+    # ✅ handle both cases
     list_title = None
-    position = 0
 
     if data:
         list_title = data.title
-        position = data.position
     elif title:
-        list_title = title
+        list_title = title  
     else:
         raise HTTPException(status_code=400, detail="Title is required")
 
+# ✅ get next position automatically
+    existing_lists = db.query(List).filter(
+    List.board_id == board_id
+).all()
+
+    next_position = len(existing_lists)
+
     lst = List(
-        board_id=board_id,
-        title=list_title,
-        position=position,
-    )
+    board_id=board_id,
+    title=list_title,
+    position=next_position,
+)
 
     db.add(lst)
     db.commit()

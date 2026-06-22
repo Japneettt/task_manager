@@ -10,6 +10,8 @@ from app.models.team_member import TeamMember
 from app.models.team_invite import TeamInvite
 from app.models.otp import OTP
 from app.models.user_query import UserQuery
+from app.models.team_message import TeamMessage
+from app.models.card_comment import CardComment
 # from app.models.board_member import 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool

@@ -1,29 +1,4 @@
-# from fastapi import WebSocket
 
-# class ConnectionManager:
-#     def __init__(self):
-#         self.connections: dict[str, list[WebSocket]] = {}
-
-#     async def connect(self, user_id: str, ws: WebSocket):
-#         await ws.accept()
-
-#         if user_id not in self.connections:
-#             self.connections[user_id] = []
-
-#         self.connections[user_id].append(ws)
-
-#     def disconnect(self, user_id: str, ws: WebSocket):
-#         if user_id in self.connections:
-#             self.connections[user_id].remove(ws)
-
-#     async def send(self, user_id: str, data: dict):
-#         if user_id in self.connections:
-#             for ws in self.connections[user_id]:
-#                 await ws.send_json(data)
-
-
-# # ✅ SINGLE INSTANCE (VERY IMPORTANT)
-# manager = ConnectionManager()
 from typing import Any
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
@@ -55,6 +30,15 @@ class ConnectionManager:
                 self.disconnect(connection, user_id)
             except Exception:
                 self.disconnect(connection, user_id)
+    # ✅ NEW: send the same message to a list of user_ids at once.
+    # Used for team chat, where everyone on the team should see the
+    # message live, not just one mentioned person.
+    async def broadcast_to_users(
+        self, user_ids: Iterable[str], message: dict[str, Any]
+    ) -> None:
+        for user_id in user_ids:
+            await self.send_to_user(str(user_id), message)
+
 
 
 manager = ConnectionManager()

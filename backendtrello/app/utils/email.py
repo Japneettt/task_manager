@@ -35,3 +35,38 @@ def send_otp(email, otp):
     server.login(SMTP_EMAIL, SMTP_PASSWORD)
     server.send_message(msg)
     server.quit()
+    
+def send_query_reply_email(
+    to_email: str,
+    reply: str
+):
+    msg = MIMEText(
+        f"""
+Hello,
+
+Workivo Support has replied to your query.
+
+Reply:
+{reply}
+
+Regards,
+Workivo Team
+"""
+    )
+
+    msg["Subject"] = "Workivo Support Reply"
+    msg["From"] = SMTP_EMAIL
+    msg["To"] = to_email
+
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+
+        server.send_message(msg)
+        server.quit()
+
+        print("✅ Reply email sent")
+
+    except Exception as e:
+        print("❌ Reply email failed:", e)
