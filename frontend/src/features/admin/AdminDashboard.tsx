@@ -193,10 +193,10 @@ const AdminDashboard: React.FC = () => {
           <div style={{ fontSize: 12, color: "#6b7280" }}>Total Tasks</div>
           <div style={{ fontSize: 22, fontWeight: 700 }}>{overview?.total_tasks ?? "—"}</div>
         </div>
-        <div style={cardStyle}>
+        {/* <div style={cardStyle}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Active Users (7d)</div>
           <div style={{ fontSize: 22, fontWeight: 700 }}>{overview?.active_users_7d ?? "—"}</div>
-        </div>
+        </div> */}
         <div style={cardStyle}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Completed Tasks %</div>
           <div style={{ fontSize: 22, fontWeight: 700 }}>{overview?.completed_tasks_pct ? `${overview.completed_tasks_pct}%` : "—"}</div>

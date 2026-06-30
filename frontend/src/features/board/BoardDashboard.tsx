@@ -606,16 +606,31 @@ const BoardsDashboard = () => {
                     </button>
 
                     <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
+                      // onClick={async (e) => {
+                      //   e.stopPropagation();
 
-                        try {
-                          await api.patch(`/boards/${board.id}/archive`);
-                          fetchBoards();
-                        } catch (err) {
-                          console.error("Archive failed", err);
-                        }
-                      }}
+                      //   try {
+                      //     await api.patch(`/boards/${board.id}/archive`);
+                      //     fetchBoards();
+                      //   } catch (err) {
+                      //     console.error("Archive failed", err);
+                      //   }
+                      // }}
+                      onClick={async (e) => {
+  e.stopPropagation();
+
+  try {
+    if (showArchived) {
+      await api.patch(`/boards/${board.id}/restore`);
+    } else {
+      await api.patch(`/boards/${board.id}/archive`);
+    }
+
+    fetchBoards();
+  } catch (err) {
+    console.error("Board action failed", err);
+  }
+}}
                       className="bwd-icon-btn archive"
                       title={showArchived ? "Restore board" : "Archive board"}
                       style={{

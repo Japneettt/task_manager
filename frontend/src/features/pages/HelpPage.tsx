@@ -330,7 +330,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../services/api";
+import { api, connectNotificationSocket } from "../../services/api";
 import {
   ArrowLeft,
   MessageCircle,
@@ -373,20 +373,39 @@ const HelpPage = () => {
     }
   };
 
+  // useEffect(() => {
+  //   loadQueries();
+
+  //   const handleReply = () => {
+  //     loadQueries();
+  //     alert("Workivo replied to your query ✅");
+  //   };
+
+  //   window.addEventListener("query-replied", handleReply);
+
+  //   return () => {
+  //     window.removeEventListener("query-replied", handleReply);
+  //   };
+  // }, []);
   useEffect(() => {
-    loadQueries();
+  loadQueries();
 
-    const handleReply = () => {
-      loadQueries();
-      alert("Workivo replied to your query ✅");
-    };
+  const ws = connectNotificationSocket(
+    (data) => {
 
-    window.addEventListener("query-replied", handleReply);
+      if (data.type === "query_reply") {
 
-    return () => {
-      window.removeEventListener("query-replied", handleReply);
-    };
-  }, []);
+        loadQueries();
+
+        alert(
+          "Workivo replied to your query ✅"
+        );
+      }
+    }
+  );
+
+  return () => ws?.close();
+}, []);
 
   const submitQuery = async () => {
     if (!message.trim()) {

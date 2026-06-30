@@ -76,10 +76,7 @@ const RegisterPage = () => {
           </div>
           <span style={styles.logoText}>Workivo</span>
         </div>
-        <div style={styles.navRight}>
-          <button style={styles.navBtn}>🌐 English ▾</button>
 
-        </div>
       </nav>
 
       {/* ── MAIN ── */}
@@ -138,7 +135,7 @@ const RegisterPage = () => {
               ))}
             </div>
             <div>
-              <div style={styles.socialText}>10,000+ teams trust TaskFlow</div>
+              <div style={styles.socialText}>10,000+ teams trust Workivo</div>
               <div style={styles.stars}>★★★★★</div>
             </div>
           </div>
@@ -147,7 +144,7 @@ const RegisterPage = () => {
         {/* RIGHT – FORM CARD */}
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>Create your account 👋</h2>
-          <p style={styles.cardSubtitle}>Get started with TaskFlow in less than a minute.</p>
+          <p style={styles.cardSubtitle}>Get started with Workivo in less than a minute.</p>
 
           {/* First + Last */}
           <div style={styles.row}>
@@ -342,7 +339,7 @@ const RegisterPage = () => {
 
       {/* FOOTER */}
       <footer style={styles.footer}>
-        <span>© 2024 TaskFlow. All rights reserved.</span>
+        <span>© 2026 Workivo. All rights reserved.</span>
         <span style={styles.footerDot}>·</span>
         <span style={styles.link}>Privacy Policy</span>
         <span style={styles.footerDot}>·</span>

@@ -408,7 +408,7 @@ const InboxPage = () => {
       <span style={{ color: color ?? "#111827", fontWeight: 500 }}>{value}</span>
     </div>
   );
- 
+
   return (
     <div className="tf" style={{
       background: "linear-gradient(150deg, #f5f3ff 0%, #ffffff 45%, #eff6ff 100%)",

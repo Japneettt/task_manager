@@ -1,6 +1,6 @@
 
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate , useLocation} from "react-router-dom";
 import { api, connectNotificationSocket } from "../../services/api";
 import AddList from "../../features/board/AddList";
 import AddCard from "../../features/board/AddCard";
@@ -89,6 +89,19 @@ function injectDashboardStyles() {
       from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+      @keyframes cardGlow {
+  0% {
+    box-shadow: 0 0 0 rgba(196,181,253,0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 18px rgba(196,181,253,0.8);
+  }
+
+  100% {
+    box-shadow: 0 0 0 rgba(196,181,253,0.2);
+  }
+}
     @keyframes wkv-slideIn {
       from { opacity: 0; transform: translateX(28px); }
       to   { opacity: 1; transform: translateX(0); }
@@ -145,11 +158,19 @@ const ROW_HEIGHT = 64; // px — approximate height of one member/invite row inc
 const TeamDashboard = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+const boardIdFromUrl =
+  new URLSearchParams(location.search).get("boardId");
+
+const cardIdFromUrl =
+  new URLSearchParams(location.search).get("cardId");
 
   const [team, setTeam] = useState<any>(null);
   const [boards, setBoards] = useState<any[]>([]);
   const [title, setTitle] = useState("");
   const [openBoard, setOpenBoard] = useState<any>(null);
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
   const [inviteInput, setInviteInput] = useState("");
@@ -209,6 +230,62 @@ const TeamDashboard = () => {
     const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, []);
+//   useEffect(() => {
+//   const openTargetBoard = async () => {
+//     if (!boardIdFromUrl) return;
+
+//     try {
+//       const res = await api.get(
+//         `/boards/${boardIdFromUrl}`
+//       );
+
+//       setOpenBoard(res.data);
+//     } catch (err) {
+//       console.error(err);
+//     }
+//   };
+
+//   openTargetBoard();
+// }, [boardIdFromUrl]);
+useEffect(() => {
+  const openTargetBoard = async () => {
+    if (!boardIdFromUrl) return;
+
+    try {
+      const res = await api.get(
+        `/boards/${boardIdFromUrl}`
+      );
+
+      setOpenBoard(res.data);
+
+      if (cardIdFromUrl) {
+        setActiveHighlightId(cardIdFromUrl);
+
+        setTimeout(() => {
+          const cardElement =
+            document.getElementById(
+              `card-${cardIdFromUrl}`
+            );
+
+          if (cardElement) {
+            cardElement.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          }
+        }, 800);
+
+        setTimeout(() => {
+          setActiveHighlightId(null);
+        }, 5000);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  openTargetBoard();
+}, [boardIdFromUrl, cardIdFromUrl]);
 
   // ✅ TEAM CHAT WEBSOCKET — same pattern used in Dashboard.tsx / InboxPage.tsx
   useEffect(() => {
@@ -1256,19 +1333,55 @@ const TeamDashboard = () => {
                                 index={index}
                               >
                                 {(provided) => (
+                                  // <div
+                                  //   ref={provided.innerRef}
+                                  //   {...provided.dragHandleProps}
+                                  //   {...provided.draggableProps}
+                                  //   style={{
+                                  //     background: "white",
+                                  //     boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                                  //     padding: "10px",
+                                  //     borderRadius: "8px",
+                                  //     marginBottom: "10px",
+                                  //     ...provided.draggableProps.style,
+                                  //   }}
+                                  // >
                                   <div
-                                    ref={provided.innerRef}
-                                    {...provided.dragHandleProps}
-                                    {...provided.draggableProps}
-                                    style={{
-                                      background: "white",
-                                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                                      padding: "10px",
-                                      borderRadius: "8px",
-                                      marginBottom: "10px",
-                                      ...provided.draggableProps.style,
-                                    }}
-                                  >
+  id={`card-${card.id}`}
+  ref={provided.innerRef}
+  {...provided.dragHandleProps}
+  {...provided.draggableProps}
+  style={{
+    background:
+      activeHighlightId === card.id
+        ? "#F8F7FF"
+        : "white",
+
+    border:
+      activeHighlightId === card.id
+        ? "3px solid #C4B5FD"
+        : "none",
+
+    boxShadow:
+      activeHighlightId === card.id
+        ? "0 0 20px rgba(196,181,253,0.7)"
+        : "0 4px 12px rgba(0,0,0,0.08)",
+    
+    animation:
+      activeHighlightId === card.id
+        ? "cardGlow 1.5s ease-in-out"
+        : "none",
+
+
+    transition: "all 0.4s ease",
+
+    padding: "10px",
+    borderRadius: "8px",
+    marginBottom: "10px",
+
+    ...provided.draggableProps.style,
+  }}
+>
                                     <div
                                       style={{
                                         background: "white",

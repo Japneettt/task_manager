@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../../services/api";
+import { api,connectNotificationSocket } from "../../services/api";
 
 const UserQueries = () => {
   const [queries, setQueries] = useState<any[]>([]);
@@ -18,6 +18,31 @@ const UserQueries = () => {
   useEffect(() => {
     loadQueries();
   }, []);
+  useEffect(() => {
+  const ws = connectNotificationSocket((data) => {
+
+    if (data.type === "new_query") {
+      setQueries((prev) => [
+        data.query,
+        ...prev
+      ]);
+    }
+
+    if (data.type === "query_updated") {
+      loadQueries();
+    }
+  });
+
+  return () => ws?.close();
+}, []);
+
+const pendingQueries = queries.filter(
+  (q) => !q.replied
+);
+
+const answeredQueries = queries.filter(
+  (q) => q.replied
+);
 
   const sendReply = async (queryId: string) => {
     const replyText = replies[queryId];
@@ -66,7 +91,15 @@ const UserQueries = () => {
       >
         User Queries
       </h2>
-
+<h3
+  style={{
+    marginBottom: "12px",
+    color: "#92400e",
+    fontWeight: 700,
+  }}
+>
+   Pending Queries ({pendingQueries.length})
+</h3>
       <div
         style={{
           background: "#fff",
@@ -98,7 +131,8 @@ const UserQueries = () => {
           </thead>
 
           <tbody>
-            {queries.length === 0 ? (
+            {/* {queries.length === 0 ? ( */}
+            {pendingQueries.length === 0 ? (
               <tr>
                 <td
                   colSpan={7}
@@ -108,11 +142,12 @@ const UserQueries = () => {
                     color: "#64748b",
                   }}
                 >
-                  No queries found
+                  No pending queries found
                 </td>
               </tr>
             ) : (
-              queries.map((q) => (
+              // queries.map((q) => (
+              pendingQueries.map((q) => (
                 <tr key={q.id}>
                   <td style={tdStyle}>
                     {q.user}
@@ -128,26 +163,37 @@ const UserQueries = () => {
                     ).toLocaleString()}
                   </td>
 
-                  <td style={tdStyle}>
-                    <span
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: "20px",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        background: q.replied
-                          ? "#dcfce7"
-                          : "#fef3c7",
-                        color: q.replied
-                          ? "#166534"
-                          : "#92400e",
-                      }}
-                    >
-                      {q.replied
-                        ? "Answered ✅"
-                        : "Pending ⏳"}
-                    </span>
-                  </td>
+<td
+  style={{
+    ...tdStyle,
+    textAlign: "center",
+    verticalAlign: "middle",
+  }}
+>
+  <span
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "6px",
+      whiteSpace: "nowrap",
+      minWidth: "120px",
+      padding: "8px 16px",
+      borderRadius: "999px",
+      fontSize: "13px",
+      fontWeight: 600,
+      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      background: q.replied
+        ? "#dcfce7"
+        : "#fef3c7",
+      color: q.replied
+        ? "#166534"
+        : "#92400e",
+    }}
+  >
+    {q.replied ? "✅ Answered" : "⏳ Pending"}
+  </span>
+</td>
 
                   <td style={tdStyle}>
                     {q.admin_reply ? (
@@ -221,6 +267,84 @@ const UserQueries = () => {
           </tbody>
         </table>
       </div>
+      <h3
+  style={{
+    marginTop: "30px",
+    marginBottom: "12px",
+    color: "#166534",
+    fontWeight: 700,
+  }}
+>
+  Answered Queries ({answeredQueries.length})
+</h3>
+
+<div
+  style={{
+    background: "#fff",
+    borderRadius: "12px",
+    overflow: "hidden",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+  }}
+>
+  <table
+    style={{
+      width: "100%",
+      borderCollapse: "collapse",
+    }}
+  >
+    <thead>
+      <tr
+        style={{
+          background: "#f8fafc",
+        }}
+      >
+        <th style={thStyle}>User</th>
+        <th style={thStyle}>Query</th>
+        <th style={thStyle}>Date</th>
+        <th style={thStyle}>Reply</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {answeredQueries.length === 0 ? (
+        <tr>
+          <td
+            colSpan={4}
+            style={{
+              textAlign: "center",
+              padding: "30px",
+              color: "#64748b",
+            }}
+          >
+            No answered queries
+          </td>
+        </tr>
+      ) : (
+        answeredQueries.map((q) => (
+          <tr key={q.id}>
+            <td style={tdStyle}>
+              {q.user}
+            </td>
+
+            <td style={tdStyle}>
+              {q.message}
+            </td>
+
+            <td style={tdStyle}>
+              {new Date(
+                q.created_at
+              ).toLocaleString()}
+            </td>
+
+            <td style={tdStyle}>
+              {q.admin_reply}
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
     </div>
   );
 };
@@ -238,43 +362,3 @@ const tdStyle = {
 };
 
 export default UserQueries;
-// import { useEffect, useState } from "react";
-// import { api } from "../../services/api";
-
-// const UserQueries = () => {
-//   const [queries, setQueries] = useState<any[]>([]);
-
-//   useEffect(() => {
-//     api.get("/admin/queries").then((res) => {
-//       setQueries(res.data);
-//     });
-//   }, []);
-
-//   return (
-//     <div>
-//       <h2>User Queries</h2>
-
-//       <table style={{ width: "100%", marginTop: 20 }}>
-//         <thead>
-//           <tr>
-//             <th>User</th>
-//             <th>Message</th>
-//             <th>Date</th>
-//           </tr>
-//         </thead>
-
-//         <tbody>
-//           {queries.map((q) => (
-//             <tr key={q.id}>
-//               <td>{q.user}</td>
-//               <td>{q.message}</td>
-//               <td>{new Date(q.created_at).toLocaleString()}</td>
-//             </tr>
-//           ))}
-//         </tbody>
-//       </table>
-//     </div>
-//   );
-// };
-
-// export default UserQueries;

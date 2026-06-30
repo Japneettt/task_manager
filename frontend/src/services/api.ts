@@ -220,3 +220,10 @@ export const getAdminActivity = () => api.get("/admin/activity");
 
 // ✅ ANALYTICS
 export const getAdminAnalytics = () => api.get("/admin/analytics");
+//user activity
+export const getRecentActivity = () =>api.get("/activity/recent");
+ 
+export const getActivityHeatmap = (days?: number) =>
+  api.get("/activity/heatmap", { params: days ? { days } : undefined });
+ 
+ export const getActivityInsights = () => api.get("/activity/insights");

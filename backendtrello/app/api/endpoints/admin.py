@@ -501,6 +501,20 @@ async def reply_to_query(
             "reply": data["reply"]
         }
     )
+    admins = (
+    db.query(User)
+    .filter(User.is_admin == True)
+    .all()
+)
+
+    for admin in admins:
+        await manager.send_to_user(
+        str(admin.id),
+        {
+            "type": "query_updated",
+            "query_id": str(query.id)
+        }
+    )
 
     return {
         "message": "Reply sent successfully ✅"

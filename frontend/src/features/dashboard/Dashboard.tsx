@@ -1,5 +1,4 @@
 // src/pages/Dashboard.tsx
-
 import React, { useEffect, useState } from "react";
 import {
   LayoutDashboard,
@@ -84,6 +83,7 @@ const Dashboard = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [allTasks, setAllTasks] = useState<any[]>([]);
   const [allBoards, setAllBoards] = useState<any[]>([]);
+  const [clickedTaskId, setClickedTaskId] = useState<string | null>(null);
 
   const months = [
     "January","February","March","April","May","June",
@@ -114,6 +114,7 @@ const Dashboard = () => {
         personalBoardsRes,
         plannerRes,
         overviewRes,
+        searchRes,
       ] = await Promise.all([
         api.get("/dashboard"),
         api.get("/activity/productivity"),
@@ -127,12 +128,22 @@ const Dashboard = () => {
         api.get("/boards/personal"),
         api.get("/planner"),
         api.get(`/dashboard/task-overview?week_offset=${currentWeek}`),
+        api.get("/dashboard/search-data"),
       ]);
-      setAllBoards(personalBoardsRes.data || []);
-      setAllTasks([
-        ...(recentTasksRes.data || []),
-        ...(deadlinesRes.data || []),
-      ]);
+      // setAllBoards(personalBoardsRes.data || []);
+      // setAllTasks([
+      //   ...(recentTasksRes.data || []),
+      //   ...(deadlinesRes.data || []),
+      // ]);
+      setTeams(searchRes.data.teams || []);
+
+setAllBoards(
+  searchRes.data.boards || []
+);
+
+setAllTasks(
+  searchRes.data.cards || []
+);
       setCounts(dashboardRes.data);
       setProductivity(productivityRes.data);
       setTeams(workloadRes.data);
@@ -304,7 +315,16 @@ const Dashboard = () => {
                       <div
                         key={b.id}
                         style={{ padding: "8px 12px", cursor: "pointer", color: "#0f172a", fontSize: "14px" }}
-                        onClick={() => navigate(`/boards/${b.id}`)}
+                        // onClick={() => navigate(`/boards/${b.id}`)}
+                        onClick={() => {
+  if (b.team_id) {
+    navigate(
+      `/teams/${b.team_id}?boardId=${b.id}`
+    );
+  } else {
+    navigate(`/boards/${b.id}`);
+  }
+}}
                       >
                         📋 {b.title}
                       </div>
@@ -315,14 +335,40 @@ const Dashboard = () => {
                 {filteredTasks.length > 0 && (
                   <>
                     <div style={{ padding: "10px 12px", fontWeight: 600, fontSize: "12px", color: "#64748b", textTransform: "uppercase" }}>Cards</div>
-                    {filteredTasks.map((task) => (
+                    {/* {filteredTasks.map((task) => (
                       <div
                         key={task.id}
                         style={{ padding: "8px 12px", cursor: "pointer", color: "#0f172a", fontSize: "14px" }}
                       >
                         ✅ {task.title}
                       </div>
-                    ))}
+                    ))} */}
+                    {filteredTasks.map((task) => (
+  <div
+    key={task.id}
+    style={{
+      padding: "8px 12px",
+      cursor: "pointer",
+      color: "#0f172a",
+      fontSize: "14px"
+    }}
+    onClick={() => {
+      setSearch("");
+
+      if (task.team_id) {
+        navigate(
+          `/teams/${task.team_id}?boardId=${task.board_id}&cardId=${task.id}`
+        );
+      } else {
+        navigate(
+          `/boards/${task.board_id}?cardId=${task.id}`
+        );
+      }
+    }}
+  >
+    ✅ {task.title}
+  </div>
+))}
                   </>
                 )}
               </div>
@@ -458,16 +504,83 @@ const Dashboard = () => {
                 return (
                   <div
                     key={i}
+                    
+// onClick={() => {
+//     if (task.team_id) {
+//       navigate(
+//         `/teams/${task.team_id}?boardId=${task.board_id}&cardId=${task.id}`
+//       );
+//     } else {
+//       navigate(
+//         `/boards/${task.board_id}`
+//       );
+//     }
+//   }}
+onClick={() => {
+  setClickedTaskId(task.id);
+
+  setTimeout(() => {
+    if (task.team_id) {
+      navigate(
+        `/teams/${task.team_id}?boardId=${task.board_id}&cardId=${task.id}`
+      );
+    } else {
+      navigate(
+        `/boards/${task.board_id}`
+      );
+    }
+  }, 200);
+}}
+
                     style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 6px", borderRadius: "8px", cursor: "pointer", transition: "background 0.15s" }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "#F8F7FC")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-                      <div style={{ width: "20px", height: "20px", borderRadius: "50%", border: `2.5px solid ${dot}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {/* <div style={{ width: "20px", height: "20px", borderRadius: "50%", border: `2.5px solid ${dot}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         {(task.status?.toLowerCase().includes("done") || task.status?.toLowerCase().includes("completed")) && (
                           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: dot }} />
                         )}
-                      </div>
+                      </div> */}
+                      <div
+  style={{
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    border:
+      clickedTaskId === task.id
+        ? "none"
+        : `2.5px solid ${dot}`,
+    background:
+      clickedTaskId === task.id
+        ? dot
+        : "transparent",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    color: "#fff",
+    fontSize: "11px",
+    fontWeight: 700,
+    transition: "all 0.2s ease"
+  }}
+>
+  {clickedTaskId === task.id ? (
+    "✓"
+  ) : (
+    (task.status?.toLowerCase().includes("done") ||
+      task.status?.toLowerCase().includes("completed")) && (
+      <div
+        style={{
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          background: dot
+        }}
+      />
+    )
+  )}
+</div>
                       <div style={{ minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#0F1226", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "120px" }}>{task.title}</p>
                         <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#94A3B8", display: "flex", alignItems: "center", gap: "4px" }}>
@@ -598,7 +711,18 @@ const Dashboard = () => {
                 const urgencyColor = getDeadlineUrgencyColor(diff);
                 return (
                   <div
-                    key={i}
+                    key={i} 
+                    onClick={() => {
+  if (item.team_id) {
+    navigate(
+      `/teams/${item.team_id}?boardId=${item.board_id}&cardId=${item.id}`
+    );
+  } else {
+    navigate(
+      `/boards/${item.board_id}`
+    );
+  }
+}}
                     style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 10px", borderRadius: "10px", cursor: "pointer", transition: "all 0.2s ease", background: "rgba(255,255,255,0.94)" }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "#F3F4F6";

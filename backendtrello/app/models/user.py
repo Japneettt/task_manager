@@ -27,3 +27,6 @@ class User(Base):
     cover_photo = Column(String, nullable=True)
     gender = Column(String, nullable=True)              # ✅ NEW
     professional_role = Column(String, nullable=True)   # ✅ NEW
+    #added23
+    secondary_email = Column(String, nullable=True)  # ✅ NEW
+    secondary_email_verified = Column(Boolean, default=False)  # ✅ NEW

@@ -33,7 +33,17 @@ class UserRead(UserBase):
     
     gender: Optional[str] = None                 # ✅ NEW
     professional_role: Optional[str] = None      # ✅ NEW
-
+    secondary_email: Optional[str] = None                 # ✅ NEW
+    secondary_email_verified: Optional[bool] = False  
+# ✅ NEW — secondary email OTP flow
+class SecondaryEmailRequest(BaseModel):
+    email: EmailStr
+ 
+ 
+class SecondaryEmailVerifyRequest(BaseModel):
+    email: EmailStr
+    otp: str
+ 
 
     class Config:
         from_attributes = True

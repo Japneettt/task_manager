@@ -24,10 +24,21 @@ const TeamManagement = () => {
   };
 
   // ✅ FIX: validate image URL properly
+  // const getValidImage = (url?: string, id?: string) => {
+  //   if (url && url.startsWith("http")) return url;
+  //   return `https://picsum.photos/400/200?random=${id}`;
+  // };
   const getValidImage = (url?: string, id?: string) => {
-    if (url && url.startsWith("http")) return url;
-    return `https://picsum.photos/400/200?random=${id}`;
-  };
+  if (url) {
+    if (url.startsWith("http")) {
+      return url;
+    }
+
+    return `http://localhost:8000${url}`;
+  }
+
+  return `https://source.unsplash.com/800x600/?team,workspace&sig=${id}`;
+};
 
   return (
     <div style={{ padding: "24px", background: "#f5f7fb", minHeight: "100vh" }}>

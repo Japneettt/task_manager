@@ -37,15 +37,23 @@ const AdminLayout = () => {
   };
 
   return (
-    <div style={{
-      display: "flex",
-      background: "#f9fafb",
-      minHeight: "100vh",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif"
-    }}>
+    // <div style={{
+    //   display: "flex",
+    //   background: "#f9fafb",
+    //   minHeight: "100vh",
+    //   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif"
+    // }}>
+    <div
+  style={{
+    background: "#f9fafb",
+    minHeight: "100vh",
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif",
+  }}
+>
      
       {/* SIDEBAR */}
-      <div style={{
+      {/* <div style={{
         width: sidebarWidth,
         background: "#ffffff",
         padding: "16px",
@@ -55,7 +63,24 @@ const AdminLayout = () => {
         height: "100vh",
         transition: "all 0.3s ease",
         boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-      }}>
+      }}> */}
+      <div
+  style={{
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: sidebarWidth,
+    height: "100vh",
+    background: "#ffffff",
+    padding: "16px",
+    borderRight: "1px solid #e5e7eb",
+    display: "flex",
+    flexDirection: "column",
+    transition: "all 0.3s ease",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+    zIndex: 1000,
+  }}
+>
         {/* HEADER WITH TOGGLE */}
         <div style={{
           display: "flex",
@@ -177,12 +202,21 @@ const AdminLayout = () => {
       </div>
  
       {/* CONTENT */}
-      <div style={{
+      {/* <div style={{
         flex: 1,
         padding: "30px",
         overflowY: "auto",
         transition: "all 0.3s ease"
-      }}>
+      }}> */}
+      <div
+  style={{
+    flex: 1,
+    marginLeft: sidebarWidth,
+    padding: "30px",
+    transition: "all 0.3s ease",
+    minHeight: "100vh",
+  }}
+>
         <Outlet />
       </div>
     </div>

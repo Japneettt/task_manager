@@ -1,4 +1,4 @@
-
+import SecondaryEmailOtpModal from "./SecondayEmailOtpModel"
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
@@ -18,6 +18,11 @@ const ProfilePage = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [secondaryEmailInput, setSecondaryEmailInput] = useState("");
+const [sendingOtp, setSendingOtp] = useState(false);
+const [secondaryEmailError, setSecondaryEmailError] = useState("");
+const [showOtpModal, setShowOtpModal] = useState(false);
+const [pendingSecondaryEmail, setPendingSecondaryEmail] = useState("");
 
   useEffect(() => {
     api.get("/users/me").then((res) => setUser(res.data));
@@ -85,7 +90,40 @@ const ProfilePage = () => {
       setSaving(false);
     }
   };
+const sendSecondaryOtp = async () => {
+  setSecondaryEmailError("");
 
+  const email = secondaryEmailInput.trim();
+
+  if (!email) {
+    setSecondaryEmailError("Please enter an email");
+    return;
+  }
+
+  setSendingOtp(true);
+
+  try {
+    await api.post("/users/send-secondary-otp", {
+      email,
+    });
+
+    setPendingSecondaryEmail(email);
+    setShowOtpModal(true);
+
+  } catch (err: any) {
+    setSecondaryEmailError(
+      err?.response?.data?.detail ||
+      "Failed to send OTP"
+    );
+  }
+
+  setSendingOtp(false);
+};
+const handleSecondaryVerified = (updatedUser: any) => {
+  setUser(updatedUser);
+  setShowOtpModal(false);
+  setSecondaryEmailInput("");
+};
   if (!user) {
     return (
       <div className="loadingShell">
@@ -232,10 +270,59 @@ const ProfilePage = () => {
               <input value={user.email} disabled />
             </div>
 
-            <div className="fieldGroup">
+            {/* <div className="fieldGroup">
               <label>Secondary Email <span className="optionalTag">Optional</span></label>
               <input placeholder="Add recovery email" />
-            </div>
+            </div> */}
+            <div className="fieldGroup">
+  <label>
+    Secondary Email
+    <span className="optionalTag">Optional</span>
+  </label>
+
+  {user.secondary_email_verified ? (
+    <div className="secondaryEmailRow">
+      <input
+        value={user.secondary_email}
+        disabled
+      />
+
+      <span className="verifiedBadge">
+        ✓ Verified
+      </span>
+    </div>
+  ) : (
+    <div className="secondaryEmailRow">
+      <input
+        placeholder="Add recovery email"
+        value={secondaryEmailInput}
+        onChange={(e) =>
+          setSecondaryEmailInput(e.target.value)
+        }
+      />
+
+      <button
+        type="button"
+        className="verifyBtn"
+        onClick={sendSecondaryOtp}
+        disabled={
+          sendingOtp ||
+          !secondaryEmailInput.trim()
+        }
+      >
+        {sendingOtp
+          ? "Sending..."
+          : "Verify"}
+      </button>
+    </div>
+  )}
+
+  {secondaryEmailError && (
+    <p className="fieldError">
+      {secondaryEmailError}
+    </p>
+  )}
+</div>
 
             <div className="fieldGroup">
               <label>Gender <span className="optionalTag">Optional</span></label>
@@ -288,6 +375,13 @@ const ProfilePage = () => {
         </div>
 
       </div>
+      {showOtpModal && (
+  <SecondaryEmailOtpModal
+    email={pendingSecondaryEmail}
+    onClose={() => setShowOtpModal(false)}
+    onVerified={handleSecondaryVerified}
+  />
+)}
 
       {/* STYLES */}
       <style>{`
@@ -580,6 +674,52 @@ select { background: #f8fafc; cursor: pointer; }
 @media (max-width: 720px) {
   .grid { grid-template-columns: 1fr; }
   .profileHeader { flex-direction: column; align-items: flex-start; margin-top: -60px; }
+}
+.secondaryEmailRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.secondaryEmailRow input {
+  flex: 1;
+}
+
+.verifyBtn {
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg,#1e3a8a,#312e81);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.verifyBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.verifiedBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0 12px;
+  min-width: 90px;
+  height: 42px;
+}
+
+.fieldError {
+  color: #ef4444;
+  margin-top: 6px;
+  font-size: 12px;
 }
 
       `}</style>

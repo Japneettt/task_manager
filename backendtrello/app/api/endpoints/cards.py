@@ -1,4 +1,4 @@
-
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
@@ -16,6 +16,8 @@ from app.models.notification import Notification
 from app.models.boards import Board
 from app.models.team_member import TeamMember
 from app.models.user import User
+from app.models.team import Team
+from app.models.activity_log import ActivityLog
 # ✅ Schemas
 from app.schemas.card import CardCreate, CardRead
 from fastapi import UploadFile, File, Form
@@ -62,7 +64,32 @@ def create_notification(db, user_id, title, message, entity_id=None):
 
     return notif
  
+def _status_label(list_title: str) -> str:
+    if not list_title:
+        return "To Do"
+    s = list_title.strip().lower()
+    if s in ("done", "completed"):
+        return "Completed"
+    if s in ("in progress", "progress", "doing", "inprogress"):
+        return "In Progress"
+    if s in ("review",):
+        return "Review"
+    return "To Do"
  
+ 
+# ✅ Build a human-readable "who moved what where" message, e.g.:
+#   "Priya Sharma moved "Fix UI" card from Sprint Board board in team Design from To Do to Completed"
+#   "Priya Sharma moved "Fix UI" card on Sprint Board board from To Do to Completed"   (no team -> personal board)
+def _build_move_message(actor: User, card_title: str, board: Optional[Board], team: Optional[Team], from_label: str, to_label: str) -> str:
+    actor_name = f"{actor.first_name} {actor.last_name}".strip() if actor else "Someone"
+    board_name = board.title if board and board.title else "a board"
+ 
+    if team:
+        location = f"from {board_name} board in team {team.name}"
+    else:
+        location = f"on {board_name} board"
+ 
+    return f'{actor_name} moved "{card_title}" card {location} from {from_label} to {to_label}'
 # ✅ CREATE CARD
 @router.post("/lists/{list_id}/cards", response_model=CardRead)
 def create_card(
@@ -245,21 +272,48 @@ def move_card(
     card_id: UUID,
     list_id: UUID,
     position: int = 0,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User=Depends(get_current_user),
 ):
     card = db.query(Card).filter(Card.id == card_id).first()
  
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
+    
+    old_list = db.query(List).filter(List.id == card.list_id).first()
+    new_list = db.query(List).filter(List.id == list_id).first()
  
     card.list_id = list_id
     card.position = position
+    # ✅ auto-complete / un-complete based on destination list
+    new_title = (new_list.title or "").strip().lower() if new_list else ""
+    if new_title in ("done", "completed"):
+        if not card.completed_at:
+            card.completed_at = datetime.now(timezone.utc)
+    else:
+        # moved OUT of Done/Completed back into another column -> reopen it
+        card.completed_at = None
  
     db.commit()
     db.refresh(card)
+    from_label = _status_label(old_list.title if old_list else "")
+    to_label = _status_label(new_list.title if new_list else "")
+ 
+    # ✅ log the move for the Recent Activity feed
+    db.add(ActivityLog(
+        board_id=card.board_id,
+        card_id=card.id,
+        actor_id=current_user.id,
+        card_title=card.title,
+        from_status=from_label,
+        to_status=to_label,
+    ))
+    db.commit()
     # Notify relevant users about the move (assigned user and board owner)
     try:
         board = db.query(Board).filter(Board.id == card.board_id).first()
+        team = db.query(Team).filter(Team.id == board.team_id).first() if board and board.team_id else None
+        
         recipients = set()
         if card.assigned_to:
             recipients.add(str(card.assigned_to))
@@ -270,7 +324,17 @@ def move_card(
             members = db.query(TeamMember).filter(TeamMember.team_id == board.team_id).all()
             for m in members:
                 recipients.add(str(m.user_id))
-
+                
+        recipients.discard(str(current_user.id))
+        message = _build_move_message(current_user, card.title, board, team, from_label, to_label)
+        for user_id in recipients:
+            create_notification(
+                db=db,
+                user_id=UUID(user_id),
+                title="Card Moved",
+                message=message,
+                entity_id=card.id,
+            )
         payload = {
             "type": "card_moved",
             "payload": {
@@ -278,6 +342,7 @@ def move_card(
                 "board_id": str(card.board_id),
                 "list_id": str(card.list_id),
                 "position": card.position,
+                "message": message,
             },
         }
 
@@ -324,16 +389,15 @@ def update_due_date(card_id: UUID, due_date: str, db: Session = Depends(get_db))
 
     return {"message": "Due date updated"}
  
-from datetime import datetime
 from app.models.lists import List
 
 @router.patch("/cards/{card_id}/complete")
-def complete_card(card_id: UUID, db: Session = Depends(get_db)):
+def complete_card(card_id: UUID, db: Session = Depends(get_db),current_user:User=Depends(get_current_user)):
     card = db.query(Card).filter(Card.id == card_id).first()
 
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-
+    old_list=db.query(List).filter(List.id==card.list_id).first()
     # ✅ mark as completed
     card.completed_at = datetime.utcnow()
 
@@ -348,6 +412,16 @@ def complete_card(card_id: UUID, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(card)
+    # ✅ log it too, so it shows up consistently in Recent Activity
+    db.add(ActivityLog(
+        board_id=card.board_id,
+        card_id=card.id,
+        actor_id=current_user.id,
+        card_title=card.title,
+        from_status=_status_label(old_list.title if old_list else ""),
+        to_status="Completed",
+    ))
+    db.commit()
 
     return {"message": "Task completed ✅"}
 

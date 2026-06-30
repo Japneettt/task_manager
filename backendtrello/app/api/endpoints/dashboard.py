@@ -125,13 +125,21 @@ def recent_tasks(
             list_name.title
             if list_name else "Todo"
         )
+        
+        board = db.query(Board).filter(
+            Board.id == c.board_id
+        ).first()
+
 
         result.append({
             "id": str(c.id),
             "title": c.title,
             "status": status,
             "priority": c.priority,
-            "due_date": c.due_date,
+            "due_date": c.due_date,          
+            "board_id": str(c.board_id),
+            "team_id": str(board.team_id) if board and board.team_id else None,
+
         })
 
     return result
@@ -202,16 +210,46 @@ def upcoming_deadlines(
     .order_by(Card.due_date.asc())\
     .limit(5)\
     .all()
+    print("======= UPCOMING DEADLINES =======")
 
-    return [
-        {
+    for c in cards:
+        print(
+        c.title,
+        c.due_date,
+        c.assigned_to,
+        c.board_id
+    )
+
+    print("==================================")
+
+    # return [
+    #     {
+    #         "id": str(c.id),
+    #         "board_id": str(c.board_id),
+    #         "title": c.title,
+    #         "due_date": c.due_date,
+    #         "priority": c.priority
+    #     }
+    #     for c in cards
+    # ]
+    result = []
+
+    for c in cards:
+        board = db.query(Board).filter(
+            Board.id == c.board_id
+        ).first()
+
+        result.append({
             "id": str(c.id),
+            "board_id": str(c.board_id),
+            "team_id": str(board.team_id) if board.team_id else None,
             "title": c.title,
             "due_date": c.due_date,
             "priority": c.priority
-        }
-        for c in cards
-    ]
+    })
+
+    return result
+
     
 @router.get("/analytics-graph")
 def analytics_graph(
@@ -394,3 +432,99 @@ def task_overview(
         })
 
     return result
+
+@router.get("/search-data")
+def search_data(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    from app.models.team import Team
+
+    cards_result = []
+    boards_result = []
+    teams_result = []
+
+    team_memberships = db.query(TeamMember).filter(
+        TeamMember.user_id == current_user.id
+    ).all()
+
+    team_ids = [m.team_id for m in team_memberships]
+
+    # =========================
+    # TEAMS
+    # =========================
+
+    teams = db.query(Team).filter(
+        Team.id.in_(team_ids)
+    ).all()
+
+    for t in teams:
+        teams_result.append({
+            "team_id": str(t.id),
+            "team_name": t.name
+        })
+
+    # =========================
+    # PERSONAL BOARDS
+    # =========================
+
+    personal_boards = db.query(Board).filter(
+        Board.owner_id == current_user.id
+    ).all()
+
+    for board in personal_boards:
+        boards_result.append({
+            "id": str(board.id),
+            "title": board.title,
+            "team_id": None
+        })
+
+    # =========================
+    # TEAM BOARDS
+    # =========================
+
+    if team_ids:
+        team_boards = db.query(Board).filter(
+            Board.team_id.in_(team_ids)
+        ).all()
+
+        for board in team_boards:
+            boards_result.append({
+                "id": str(board.id),
+                "title": board.title,
+                "team_id": str(board.team_id)
+            })
+
+    # =========================
+    # ALL CARDS
+    # =========================
+
+    cards = db.query(Card).join(Board).filter(
+        or_(
+            and_(
+                Board.owner_id == current_user.id,
+                Board.team_id == None
+            ),
+            Board.team_id.in_(team_ids)
+        )
+    ).all()
+
+    for card in cards:
+        board = db.query(Board).filter(
+            Board.id == card.board_id
+        ).first()
+
+        cards_result.append({
+            "id": str(card.id),
+            "title": card.title,
+            "board_id": str(card.board_id),
+            "team_id": str(board.team_id)
+            if board and board.team_id
+            else None
+        })
+
+    return {
+        "teams": teams_result,
+        "boards": boards_result,
+        "cards": cards_result
+    }

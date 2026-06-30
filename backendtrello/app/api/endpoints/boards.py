@@ -167,7 +167,25 @@ def archive_board(
 
     return {"message": "Board archived"}
 
+@router.patch("/{board_id}/restore")
+def restore_board(
+    board_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    board = db.query(Board).filter(Board.id == board_id).first()
 
+    if not board:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    if board.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    board.archived = False
+
+    db.commit()
+
+    return {"message": "Board restored"}
 @router.get("/archived")
 def get_archived_boards(
     db: Session = Depends(get_db),

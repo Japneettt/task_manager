@@ -601,31 +601,65 @@ def get_all_teams(
 ):
     teams = db.query(Team).all()
 
+    # def clean_url(url: str):
+    #     if not url:
+    #         return None
+
+    #     # ✅ remove HTML tags like <a ...>
+    #     if "<a" in url:
+    #         url = re.sub(r"<.*?>", "", url).strip()
+
+    #     # ✅ final safety
+    #     if not url.startswith("http"):
+    #         return None
+
+    #     return url
     def clean_url(url: str):
         if not url:
             return None
 
-        # ✅ remove HTML tags like <a ...>
         if "<a" in url:
             url = re.sub(r"<.*?>", "", url).strip()
 
-        # ✅ final safety
-        if not url.startswith("http"):
-            return None
-
         return url
+    result = []
 
-    return [
-        {
-            "id": str(team.id),
-            "name": team.name,
-            "type": team.type,
-            "description": team.description,
-            "image_url": clean_url(team.image_url),  # ✅ FIXED HERE
-            "owner": str(team.owner_id),
-            "members_count": db.query(TeamMember)
-                .filter(TeamMember.team_id == team.id)
-                .count()
-        }
-        for team in teams
-    ]
+    for team in teams:
+        owner = (
+        db.query(User)
+        .filter(User.id == team.owner_id)
+        .first()
+    )
+
+        result.append({
+        "id": str(team.id),
+        "name": team.name,
+        "type": team.type,
+        "description": team.description,
+        "image_url": clean_url(team.image_url),
+        "owner": (
+            f"{owner.first_name} {owner.last_name}"
+            if owner
+            else "Unknown"
+        ),
+        "members_count": db.query(TeamMember)
+            .filter(TeamMember.team_id == team.id)
+            .count(),
+    })
+
+    return result
+
+    # return [
+    #     {
+    #         "id": str(team.id),
+    #         "name": team.name,
+    #         "type": team.type,
+    #         "description": team.description,
+    #         "image_url": clean_url(team.image_url),  # ✅ FIXED HERE
+    #         "owner": str(team.owner_id),
+    #         "members_count": db.query(TeamMember)
+    #             .filter(TeamMember.team_id == team.id)
+    #             .count()
+    #     }
+    #     for team in teams
+    # ]

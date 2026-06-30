@@ -612,12 +612,12 @@ const AuthPage = () => {
         </div>
 
         {/* NAV */}
-        <nav className="tf-nav" style={{ position: "relative", zIndex: 1 }}>
+        {/* <nav className="tf-nav" style={{ position: "relative", zIndex: 1 }}>
           <div className="tf-nav-logo">
             <img src={workivoLogo} alt="Workivo" className="tf-nav-logo-img" />
             Workivo
           </div>
-        </nav>
+        </nav> */}
 
         {/* BODY */}
         <div className="tf-body" style={{ position: "relative", zIndex: 1 }}>
@@ -683,10 +683,41 @@ const AuthPage = () => {
           </div>
 
           {/* RIGHT — Login card */}
-          <div className="tf-right">
+          {/* <div className="tf-right">
             <h2 className="tf-form-title">Welcome back </h2>
-            <p className="tf-form-sub">Log in to your account to continue</p>
+            <p className="tf-form-sub">Log in to your account to continue</p> */}
+<div className="tf-right">
 
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "16px",
+      marginBottom: "28px",
+    }}
+  >
+               <img src={workivoLogo} alt="Workivo" className="h-10 w-auto object-contain" />
+
+    <div>
+      <h2
+        className="tf-form-title"
+        style={{
+          marginBottom: "4px",
+        }}
+      >
+        Welcome Back
+      </h2>
+
+      <p
+        className="tf-form-sub"
+        style={{
+          marginBottom: 0,
+        }}
+      >
+        Log in to your account to continue
+      </p>
+    </div>
+  </div>
             {error && <div className="tf-error">{error}</div>}
 
             <form onSubmit={handleLogin}>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import Navbar from "../../components/layout/Navbar";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Modal, Button, Form } from "react-bootstrap";
 import TaskCard from "./TaskCard";
 import EditCardModal from "./EditCardModal";
@@ -61,6 +61,10 @@ const BoardPage = () => {
   const [newListTitle, setNewListTitle] = useState("");
   const [selectedListId, setSelectedListId] = useState<string>("");
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
+
+const highlightCardId = searchParams.get("cardId");
 
   const fetchBoard = async () => {
     try {
@@ -155,6 +159,30 @@ const BoardPage = () => {
   useEffect(() => {
     fetchBoard();
   }, [id]);
+useEffect(() => {
+  if (!highlightCardId || !board) return;
+
+  setActiveHighlightId(highlightCardId);
+
+  setTimeout(() => {
+    const cardElement = document.getElementById(
+      `card-${highlightCardId}`
+    );
+
+    if (cardElement) {
+      cardElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, 500);
+
+  const removeTimer = setTimeout(() => {
+    setActiveHighlightId(null);
+  }, 5000);
+
+  return () => clearTimeout(removeTimer);
+}, [highlightCardId, board]);
 
   // ✅ DRAG HANDLER
   const handleDragEnd = async (result: any) => {
@@ -235,6 +263,23 @@ const BoardPage = () => {
 
   return (
     <div style={{ background: "#f6f8fb", minHeight: "100vh" }}>
+      
+<style>{`
+@keyframes highlightPulse {
+  0% {
+    box-shadow: 0 0 0 rgba(196,181,253,0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 18px rgba(196,181,253,0.7);
+  }
+
+  100% {
+    box-shadow: 0 0 0 rgba(196,181,253,0.2);
+  }
+}
+    `}</style>
+
       <Navbar />
 
       <div className="board-wrapper" style={{ padding: "20px" }}>
@@ -306,11 +351,44 @@ const BoardPage = () => {
                         index={index}
                       >
                         {(provided, snapshot) => (
+                          // <div
+                          //   ref={provided.innerRef}
+                          //   {...provided.draggableProps}
+                          //   {...provided.dragHandleProps}
+                          // >
                           <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
+  id={`card-${card.id}`}
+  ref={provided.innerRef}
+  {...provided.draggableProps}
+  {...provided.dragHandleProps}
+  style={{
+    ...(provided.draggableProps.style || {}),
+    border:
+      activeHighlightId === card.id
+        ? "3px solid #C4B5FD"
+        : "none",
+
+    borderRadius: "16px",
+    
+background:
+  activeHighlightId === card.id
+    ? "#F8F5FF"
+    : undefined,
+
+
+    boxShadow:
+      activeHighlightId === card.id
+        ? "0 0 25px rgba(196,181,253,0.6)"
+        : "none",
+
+    animation:
+      activeHighlightId === card.id
+        ? "highlightPulse 1.5s ease-in-out"
+        : "none",
+
+    transition: "all 0.3s ease",
+  }}
+>
                             <TaskCard
                               {...card}
                               isDragging={snapshot.isDragging}
