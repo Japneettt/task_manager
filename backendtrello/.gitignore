@@ -6,3 +6,5 @@ __pycache__/
 *.log
 trelloclone-5bcc6-firebase-adminsdk-fbsvc-a3506677e7.json
 *.json
+chroma_db/
+backendtrello/chroma_db/

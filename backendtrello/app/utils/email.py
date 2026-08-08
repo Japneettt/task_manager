@@ -1,8 +1,9 @@
 import smtplib
 from email.mime.text import MIMEText
+from app.core.config import settings
 
-SMTP_EMAIL = "babita2000rana@gmail.com"
-SMTP_PASSWORD = "neda axmw xayj iqlj"
+SMTP_EMAIL = settings.SMTP_EMAIL
+SMTP_PASSWORD = settings.SMTP_PASSWORD
 
 def send_invite_email(to_email: str, link: str):
     msg = MIMEText(f"You are invited to join a team.\nClick here: {link}")

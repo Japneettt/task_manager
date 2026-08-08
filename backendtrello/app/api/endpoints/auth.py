@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime
-from app.core.firebase import verify_firebase_token
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.auth import RegisterRequest, LoginRequest, VerifySchema
@@ -195,47 +194,7 @@ def resend_otp(email: str, db: Session = Depends(get_db)):
     return {"message": "OTP resent ✅"}
 
 
-@router.post("/google")
-def google_login(data: dict, response: Response, db: Session = Depends(get_db)):
-    token = data.get("token")
-    decoded = verify_firebase_token(token)
 
-    if not decoded:
-        raise HTTPException(401, "Invalid Google token")
-
-    email = decoded.get("email")
-    name = decoded.get("name", "")
-
-    first_name = name.split(" ")[0] if name else "User"
-    last_name = " ".join(name.split(" ")[1:]) if len(name.split(" ")) > 1 else "User"
-
-    user = db.query(User).filter(User.email == email).first()
-
-    # ✅ CREATE USER IF NOT EXISTS
-    if not user:
-        user = User(
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            hashed_password="google_auth"  # dummy
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    refresh_token = create_refresh_token({"sub": str(user.id)})
-    set_refresh_cookie(response, refresh_token)
-
-    return {
-        "access_token": create_access_token({"sub": str(user.id)}),
-        # "refresh_token": create_refresh_token({"sub": str(user.id)}),
-        "user": {
-            "id": str(user.id),
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-        }
-    }
-    
     
 @router.post("/admin/login")
 def admin_login(data: LoginRequest, db: Session = Depends(get_db)):
