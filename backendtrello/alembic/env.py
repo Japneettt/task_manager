@@ -34,6 +34,17 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
+target_metadata = Base.metadata
+
+# Pull the DB URL from environment/app settings instead of alembic.ini
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
+
 
 
 
